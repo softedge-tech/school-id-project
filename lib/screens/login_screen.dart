@@ -25,6 +25,10 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
+<<<<<<< HEAD
+=======
+    // print("_______________________________");
+>>>>>>> 9fed2620a733a49f5cc9eeba919964883862e6de
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = context.read<AuthProvider>();
@@ -37,10 +41,10 @@ class _LoginScreenState extends State<LoginScreen> {
     print("____________________________222___");
 
     if (success && mounted) {
-      print('Login successful');
+      // print('Login successful');
       final user = authProvider.currentUser!;
       final route = _getRouteForRole(user.role, user);
-      print(route);
+      // print(route);
       context.go(route);
     } else if (mounted && authProvider.error != null) {
       print('${authProvider.error}');

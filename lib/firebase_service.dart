@@ -494,7 +494,7 @@ class FirebaseService {
   // ========== HELPER METHODS ==========
 
   String generateParentFormLink(String schoolId, String classId) {
-    return 'https://yourapp.com/parent-form/$schoolId/$classId';
+    return 'http://localhost:64373/#/parent-form/$schoolId/$classId';
   }
 
   String _handleAuthException(FirebaseAuthException e) {

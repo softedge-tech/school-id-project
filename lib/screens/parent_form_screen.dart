@@ -1,7 +1,6 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:image_cropper/image_cropper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
@@ -29,7 +28,8 @@ class _ParentFormScreenState extends State<ParentFormScreen> {
   final _contactController = TextEditingController();
   final _bloodGroupController = TextEditingController();
 
-  File? _photo;
+  Uint8List? _photoBytes;
+
   bool _isSubmitting = false;
   bool _isSubmitted = false;
 
@@ -45,41 +45,24 @@ class _ParentFormScreenState extends State<ParentFormScreen> {
     super.dispose();
   }
 
-  Future<void> _pickAndCropImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+    );
 
     if (pickedFile != null) {
-      final croppedFile = await ImageCropper().cropImage(
-        sourcePath: pickedFile.path,
-        aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
-        uiSettings: [
-          AndroidUiSettings(
-            toolbarTitle: 'Crop Photo',
-            toolbarColor: Colors.blue,
-            toolbarWidgetColor: Colors.white,
-            initAspectRatio: CropAspectRatioPreset.square,
-            lockAspectRatio: true,
-          ),
-          IOSUiSettings(
-            title: 'Crop Photo',
-            aspectRatioLockEnabled: true,
-          ),
-        ],
-      );
-
-      if (croppedFile != null) {
-        setState(() {
-          _photo = File(croppedFile.path);
-        });
-      }
+      final bytes = await pickedFile.readAsBytes();
+      setState(() {
+        _photoBytes = bytes;
+      });
     }
   }
 
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_photo == null) {
+    if (_photoBytes == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please upload a photo'),
@@ -97,29 +80,31 @@ class _ParentFormScreenState extends State<ParentFormScreen> {
       final firestore = FirebaseFirestore.instance;
       final storage = FirebaseStorage.instance;
 
-      final studentId = firestore
+      // Generate a new student ID
+      final studentRef = firestore
           .collection('schools')
           .doc(widget.schoolId)
           .collection('classes')
           .doc(widget.classId)
           .collection('students')
-          .doc()
-          .id;
+          .doc();
 
-      final ref = storage.ref().child(
-          'students/${widget.schoolId}/${widget.classId}/$studentId/${DateTime.now().millisecondsSinceEpoch}.jpg');
+      final studentId = studentRef.id;
 
-      final uploadTask = await ref.putFile(_photo!);
+      // Upload photo to Firebase Storage
+      final storageRef = storage.ref().child(
+        'students/${widget.schoolId}/${widget.classId}/$studentId/${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
+
+      final uploadTask = await storageRef.putData(
+        _photoBytes!,
+        SettableMetadata(contentType: 'image/jpeg'),
+      );
+
       final photoUrl = await uploadTask.ref.getDownloadURL();
 
-      await firestore
-          .collection('schools')
-          .doc(widget.schoolId)
-          .collection('classes')
-          .doc(widget.classId)
-          .collection('students')
-          .doc(studentId)
-          .set({
+      // Save student info to Firestore
+      await studentRef.set({
         'schoolId': widget.schoolId,
         'classId': widget.classId,
         'name': _nameController.text.trim(),
@@ -137,6 +122,13 @@ class _ParentFormScreenState extends State<ParentFormScreen> {
       setState(() {
         _isSubmitted = true;
       });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Student added successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -161,11 +153,7 @@ class _ParentFormScreenState extends State<ParentFormScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.check_circle,
-                color: Colors.green,
-                size: 80,
-              ),
+              const Icon(Icons.check_circle, color: Colors.green, size: 80),
               const SizedBox(height: 16),
               const Text(
                 'Successfully Submitted!',
@@ -189,7 +177,7 @@ class _ParentFormScreenState extends State<ParentFormScreen> {
                     _addressController.clear();
                     _contactController.clear();
                     _bloodGroupController.clear();
-                    _photo = null;
+                    _photoBytes = null;
                   });
                 },
                 child: const Text('Submit Another'),
@@ -201,9 +189,7 @@ class _ParentFormScreenState extends State<ParentFormScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Student ID Card Form'),
-      ),
+      appBar: AppBar(title: const Text('Student ID Card Form')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -223,25 +209,29 @@ class _ParentFormScreenState extends State<ParentFormScreen> {
               const SizedBox(height: 24),
               Center(
                 child: GestureDetector(
-                  onTap: _pickAndCropImage,
+                  onTap: _pickImage,
                   child: Container(
                     width: 150,
                     height: 150,
                     decoration: BoxDecoration(
                       color: Colors.grey.shade200,
                       borderRadius: BorderRadius.circular(12),
-                      image: _photo != null
+                      image: _photoBytes != null
                           ? DecorationImage(
-                              image: FileImage(_photo!),
+                              image: MemoryImage(_photoBytes!),
                               fit: BoxFit.cover,
                             )
                           : null,
                     ),
-                    child: _photo == null
+                    child: _photoBytes == null
                         ? const Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.add_a_photo, size: 40, color: Colors.grey),
+                              Icon(
+                                Icons.add_a_photo,
+                                size: 40,
+                                color: Colors.grey,
+                              ),
                               SizedBox(height: 8),
                               Text(
                                 'Upload Photo',
@@ -253,6 +243,7 @@ class _ParentFormScreenState extends State<ParentFormScreen> {
                   ),
                 ),
               ),
+
               const SizedBox(height: 24),
               TextFormField(
                 controller: _nameController,
