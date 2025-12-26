@@ -25,10 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
-<<<<<<< HEAD
-=======
     // print("_______________________________");
->>>>>>> 9fed2620a733a49f5cc9eeba919964883862e6de
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = context.read<AuthProvider>();
