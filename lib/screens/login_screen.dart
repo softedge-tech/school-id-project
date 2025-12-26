@@ -25,7 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
-    print("_______________________________");
+    // print("_______________________________");
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = context.read<AuthProvider>();
@@ -35,10 +35,10 @@ class _LoginScreenState extends State<LoginScreen> {
     );
 
     if (success && mounted) {
-      print('Login successful');
+      // print('Login successful');
       final user = authProvider.currentUser!;
       final route = _getRouteForRole(user.role, user);
-      print(route);
+      // print(route);
       context.go(route);
     } else if (mounted && authProvider.error != null) {
       ScaffoldMessenger.of(context).showSnackBar(
