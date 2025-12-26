@@ -38,7 +38,6 @@ class AuthProvider extends ChangeNotifier {
       print("__________________________1111_____");
 
       _currentUser = await _firebaseService.signIn(email, password);
-      print(_currentUser);
       if (_currentUser == null) {
         _error = 'Invalid credentials';
         return false;
@@ -111,6 +110,7 @@ class SchoolProvider extends ChangeNotifier {
       _selectedSchool = await _firebaseService.getSchool(schoolId);
     } catch (e) {
       _error = e.toString();
+      print(e);
     } finally {
       _isLoading = false;
       notifyListeners();

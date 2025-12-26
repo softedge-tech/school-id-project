@@ -117,6 +117,7 @@ class _SchoolAdminDashboardState extends State<SchoolAdminDashboard> {
           }
 
           if (provider.error != null) {
+            print('${provider.error}');
             return Center(
               child: Container(
                 margin: const EdgeInsets.all(24),

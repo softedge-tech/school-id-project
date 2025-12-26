@@ -46,6 +46,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           }
 
           if (provider.error != null) {
+            print('${provider.error}');
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
