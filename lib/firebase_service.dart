@@ -17,13 +17,13 @@ class FirebaseService {
         email: email,
         password: password,
       );
-      
+
       if (credential.user != null) {
         final userDoc = await _firestore
             .collection('users')
             .doc(credential.user!.uid)
             .get();
-        
+
         if (userDoc.exists) {
           return UserModel.fromMap(userDoc.data()!, userDoc.id);
         }
@@ -32,6 +32,7 @@ class FirebaseService {
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
     } catch (e) {
+      print(e);
       throw 'Login failed: ${e.toString()}';
     }
   }
@@ -238,9 +239,9 @@ class FirebaseService {
           .collection('classes')
           .doc(classId)
           .update({
-        'isActive': false,
-        'deletedAt': FieldValue.serverTimestamp(),
-      });
+            'isActive': false,
+            'deletedAt': FieldValue.serverTimestamp(),
+          });
     } catch (e) {
       throw 'Failed to delete class: ${e.toString()}';
     }
@@ -415,9 +416,9 @@ class FirebaseService {
           .collection('students')
           .doc(studentId)
           .update({
-        'isDeleted': true,
-        'deletedAt': FieldValue.serverTimestamp(),
-      });
+            'isDeleted': true,
+            'deletedAt': FieldValue.serverTimestamp(),
+          });
     } catch (e) {
       throw 'Failed to delete student: ${e.toString()}';
     }
@@ -480,7 +481,8 @@ class FirebaseService {
   }) async {
     try {
       final ref = _storage.ref().child(
-          'students/$schoolId/$classId/$studentId/${DateTime.now().millisecondsSinceEpoch}.jpg');
+        'students/$schoolId/$classId/$studentId/${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
 
       final uploadTask = await ref.putFile(photo);
       return await uploadTask.ref.getDownloadURL();

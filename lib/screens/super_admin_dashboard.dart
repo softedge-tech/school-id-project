@@ -23,15 +23,21 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Super Admin Dashboard'),
+        elevation: 0,
+        backgroundColor: const Color(0xFF1A237E), // Navy blue
+        title: const Text(
+          'Super Admin Dashboard',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: () => context.read<SchoolProvider>().loadSchools(),
           ),
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout, color: Colors.white),
             onPressed: () async {
               await context.read<AuthProvider>().signOut();
               if (mounted) context.go('/login');
@@ -42,7 +48,9 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
       body: Consumer<SchoolProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFF1A237E)),
+            );
           }
 
           if (provider.error != null) {
@@ -50,9 +58,27 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('Error: ${provider.error}'),
+                  Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error: ${provider.error}',
+                    style: TextStyle(color: Colors.grey[700], fontSize: 16),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: () => provider.loadSchools(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1A237E),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
                     child: const Text('Retry'),
                   ),
                 ],
@@ -61,8 +87,22 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           }
 
           if (provider.schools.isEmpty) {
-            return const Center(
-              child: Text('No schools yet. Create your first school!'),
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.school_outlined,
+                    size: 80,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No schools yet. Create your first school!',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                  ),
+                ],
+              ),
             );
           }
 
@@ -72,17 +112,51 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
             itemBuilder: (context, index) {
               final school = provider.schools[index];
               return Card(
+                elevation: 2,
+                margin: const EdgeInsets.only(bottom: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   leading: CircleAvatar(
-                    child: Text(school.name[0]),
+                    backgroundColor: const Color(0xFF1A237E),
+                    child: Text(
+                      school.name[0],
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
-                  title: Text(school.name),
-                  subtitle: Text(
-                    'ID: ${school.schoolLoginId}\n${school.location}',
+                  title: Text(
+                    school.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      color: Color(0xFF1A237E),
+                    ),
                   ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.arrow_forward_ios),
-                    onPressed: () => context.go('/school/${school.id}'),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'ID: ${school.schoolLoginId}\n${school.location}',
+                      style: TextStyle(color: Colors.grey[700], fontSize: 13),
+                    ),
+                  ),
+                  trailing: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A237E),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_forward_ios, size: 18),
+                      color: Colors.white,
+                      onPressed: () => context.go('/school/${school.id}'),
+                    ),
                   ),
                   isThreeLine: true,
                 ),
@@ -93,8 +167,14 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showCreateSchoolDialog(context),
+        backgroundColor: const Color(0xFF1A237E),
+        foregroundColor: Colors.white,
+        elevation: 4,
         icon: const Icon(Icons.add),
-        label: const Text('Add School'),
+        label: const Text(
+          'Add School',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
       ),
     );
   }
@@ -110,7 +190,14 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Create New School'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Create New School',
+          style: TextStyle(
+            color: Color(0xFF1A237E),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         content: SingleChildScrollView(
           child: Form(
             key: formKey,
@@ -119,35 +206,98 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
               children: [
                 TextFormField(
                   controller: nameController,
-                  decoration: const InputDecoration(labelText: 'School Name'),
+                  decoration: InputDecoration(
+                    labelText: 'School Name',
+                    labelStyle: const TextStyle(color: Color(0xFF1A237E)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF1A237E),
+                        width: 2,
+                      ),
+                    ),
+                  ),
                   validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: contactController,
-                  decoration: const InputDecoration(labelText: 'Contact Number'),
+                  decoration: InputDecoration(
+                    labelText: 'Contact Number',
+                    labelStyle: const TextStyle(color: Color(0xFF1A237E)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF1A237E),
+                        width: 2,
+                      ),
+                    ),
+                  ),
                   keyboardType: TextInputType.phone,
                   validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: locationController,
-                  decoration: const InputDecoration(labelText: 'Location'),
+                  decoration: InputDecoration(
+                    labelText: 'Location',
+                    labelStyle: const TextStyle(color: Color(0xFF1A237E)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF1A237E),
+                        width: 2,
+                      ),
+                    ),
+                  ),
                   validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: prefixController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'ID Card Prefix',
                     hintText: 'e.g., SCH001',
+                    labelStyle: const TextStyle(color: Color(0xFF1A237E)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF1A237E),
+                        width: 2,
+                      ),
+                    ),
                   ),
                   validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: passwordController,
-                  decoration: const InputDecoration(labelText: 'Admin Password'),
+                  decoration: InputDecoration(
+                    labelText: 'Admin Password',
+                    labelStyle: const TextStyle(color: Color(0xFF1A237E)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF1A237E),
+                        width: 2,
+                      ),
+                    ),
+                  ),
                   obscureText: true,
                   validator: (v) {
                     if (v?.isEmpty ?? true) return 'Required';
@@ -162,12 +312,15 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(foregroundColor: Colors.grey[600]),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () async {
               if (formKey.currentState!.validate()) {
-                final success = await context.read<SchoolProvider>().createSchool(
+                final success = await context
+                    .read<SchoolProvider>()
+                    .createSchool(
                       name: nameController.text.trim(),
                       contactNumber: contactController.text.trim(),
                       location: locationController.text.trim(),
@@ -179,15 +332,27 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                   Navigator.pop(context);
                   if (success) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('School created successfully'),
-                        backgroundColor: Colors.green,
+                      SnackBar(
+                        content: const Text('School created successfully'),
+                        backgroundColor: const Color(0xFF1A237E),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                     );
                   }
                 }
               }
             },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1A237E),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
             child: const Text('Create'),
           ),
         ],
