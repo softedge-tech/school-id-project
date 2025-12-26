@@ -1,0 +1,92 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function isSuperAdmin() {
+      return isAuthenticated() && getUserData().role == 'super_admin';
+    }
+    
+    function isSchoolAdmin(schoolId) {
+      return isAuthenticated() && 
+             getUserData().role == 'school_admin' && 
+             getUserData().schoolId == schoolId;
+    }
+    
+    function isTeacher(schoolId, classId) {
+      return isAuthenticated() && 
+             getUserData().role == 'teacher' && 
+             getUserData().schoolId == schoolId &&
+             getUserData().classId == classId;
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated() && 
+                     (request.auth.uid == userId || isSuperAdmin());
+      allow write: if isSuperAdmin();
+    }
+    
+    // Schools collection
+    match /schools/{schoolId} {
+      allow read: if isAuthenticated() && 
+                     (isSuperAdmin() || isSchoolAdmin(schoolId));
+      allow create: if isSuperAdmin();
+      allow update, delete: if isSuperAdmin();
+      
+      // Classes subcollection
+      match /classes/{classId} {
+        allow read: if isAuthenticated() && 
+                       (isSuperAdmin() || 
+                        isSchoolAdmin(schoolId) || 
+                        isTeacher(schoolId, classId));
+        allow create, update: if isSuperAdmin() || isSchoolAdmin(schoolId);
+        allow delete: if isSuperAdmin() || isSchoolAdmin(schoolId);
+        
+        // Students subcollection
+        match /students/{studentId} {
+          // Super admin, school admin, and assigned teacher can read
+          allow read: if isAuthenticated() && 
+                         (isSuperAdmin() || 
+                          isSchoolAdmin(schoolId) || 
+                          isTeacher(schoolId, classId));
+          
+          // Parents can create via link (no auth required)
+          allow create: if true;
+          
+          // Teacher can update only their class students
+          allow update: if isSuperAdmin() || 
+                           isSchoolAdmin(schoolId) || 
+                           isTeacher(schoolId, classId);
+          
+          // Only super admin and school admin can delete
+          allow delete: if isSuperAdmin() || isSchoolAdmin(schoolId);
+        }
+      }
+    }
+  }
+}
+
+// Storage rules
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /students/{schoolId}/{classId}/{studentId}/{allPaths=**} {
+      // Anyone can upload (for parent form)
+      allow create: if true;
+      
+      // Authenticated users can read
+      allow read: if request.auth != null;
+      
+      // Teacher can update their class photos
+      allow update, delete: if request.auth != null;
+    }
+  }
+}
