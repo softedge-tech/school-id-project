@@ -28,16 +28,20 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = context.read<AuthProvider>();
+    print("___________________________111____");
+
     final success = await authProvider.signIn(
       _emailController.text.trim(),
       _passwordController.text,
     );
+    print("____________________________222___");
 
     if (success && mounted) {
       final user = authProvider.currentUser!;
       final route = _getRouteForRole(user.role, user);
       context.go(route);
     } else if (mounted && authProvider.error != null) {
+      print('${authProvider.error}');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(authProvider.error!),

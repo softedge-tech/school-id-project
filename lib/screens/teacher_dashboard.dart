@@ -32,7 +32,10 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
       });
 
       if (_schoolId != null && _classId != null) {
-        await context.read<StudentProvider>().loadStudents(_schoolId!, _classId!);
+        await context.read<StudentProvider>().loadStudents(
+          _schoolId!,
+          _classId!,
+        );
         await context.read<ClassProvider>().loadClass(_schoolId!, _classId!);
       }
     }
@@ -42,9 +45,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
   Widget build(BuildContext context) {
     if (_schoolId == null || _classId == null) {
       return const Scaffold(
-        body: Center(
-          child: Text('Invalid teacher configuration'),
-        ),
+        body: Center(child: Text('Invalid teacher configuration')),
       );
     }
 
@@ -63,10 +64,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
             icon: const Icon(Icons.share),
             onPressed: () => _shareParentFormLink(context),
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadData,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadData),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
@@ -83,6 +81,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
           }
 
           if (provider.error != null) {
+            print(provider.error);
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -102,7 +101,11 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.people_outline, size: 80, color: Colors.grey),
+                  const Icon(
+                    Icons.people_outline,
+                    size: 80,
+                    color: Colors.grey,
+                  ),
                   const SizedBox(height: 16),
                   const Text('No students yet'),
                   const SizedBox(height: 16),
@@ -198,10 +201,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                 color: Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Text(
-                link,
-                style: const TextStyle(fontSize: 12),
-              ),
+              child: Text(link, style: const TextStyle(fontSize: 12)),
             ),
           ],
         ),

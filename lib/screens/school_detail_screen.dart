@@ -16,33 +16,12 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
   @override
   void initState() {
     super.initState();
-    // ✅ Use WidgetsBinding to ensure providers are ready
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadData();
-    });
+    _loadData();
   }
 
   Future<void> _loadData() async {
-    if (!mounted) return;
-    
-    // ✅ Load school and classes sequentially with error handling
-    try {
-      await context.read<SchoolProvider>().loadSchool(widget.schoolId);
-      await context.read<ClassProvider>().loadClasses(widget.schoolId);
-      
-      // ✅ Debug print to see what's loaded
-      print('📚 Loaded ${context.read<ClassProvider>().classes.length} classes');
-      for (var c in context.read<ClassProvider>().classes) {
-        print('  - ${c.className} (${c.id})');
-      }
-    } catch (e) {
-      print('❌ Error loading data: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading data: $e')),
-        );
-      }
-    }
+    await context.read<SchoolProvider>().loadSchool(widget.schoolId);
+    await context.read<ClassProvider>().loadClasses(widget.schoolId);
   }
 
   @override
@@ -53,10 +32,6 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
       backgroundColor: Colors.grey.shade50,
       body: Consumer2<SchoolProvider, ClassProvider>(
         builder: (context, schoolProvider, classProvider, child) {
-          // ✅ Debug prints
-          print('🔄 Building UI - isLoading: school=${schoolProvider.isLoading}, class=${classProvider.isLoading}');
-          print('📊 Classes count: ${classProvider.classes.length}');
-          
           if (schoolProvider.isLoading || classProvider.isLoading) {
             return Center(
               child: Column(
@@ -116,9 +91,6 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
               ),
             );
           }
-
-          // ✅ Get classes list
-          final classes = classProvider.classes;
 
           return Column(
             children: [
@@ -256,7 +228,7 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
-                              '${classes.length} Total',
+                              '${classProvider.classes.length} Total',
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 color: theme.primaryColor,
@@ -267,34 +239,10 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // ✅ Error display
-                      if (classProvider.error != null)
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          margin: const EdgeInsets.only(bottom: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade50,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.red.shade200),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.error_outline, color: Colors.red.shade700),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  'Error: ${classProvider.error}',
-                                  style: TextStyle(color: Colors.red.shade700),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
                       // Classes List
-                      classes.isEmpty
+                      classProvider.classes.isEmpty
                           ? _buildEmptyClassesState()
-                          : _buildClassesList(classes, theme),
+                          : _buildClassesList(classProvider.classes, theme),
                     ],
                   ),
                 ),

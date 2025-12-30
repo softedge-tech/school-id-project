@@ -32,6 +32,7 @@ class FirebaseService {
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
     } catch (e) {
+      print(e);
       throw 'Login failed: ${e.toString()}';
     }
   }

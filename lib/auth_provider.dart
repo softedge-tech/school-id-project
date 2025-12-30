@@ -5,7 +5,7 @@ import 'models.dart';
 
 class AuthProvider extends ChangeNotifier {
   final FirebaseService _firebaseService = FirebaseService();
-  
+
   UserModel? _currentUser;
   bool _isLoading = false;
   String? _error;
@@ -36,9 +36,9 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = true;
       _error = null;
       notifyListeners();
+      print("__________________________1111_____");
 
       _currentUser = await _firebaseService.signIn(email, password);
-      
       if (_currentUser == null) {
         _error = 'Invalid credentials';
         return false;
@@ -76,7 +76,7 @@ class AuthProvider extends ChangeNotifier {
 
 class SchoolProvider extends ChangeNotifier {
   final FirebaseService _firebaseService = FirebaseService();
-  
+
   List<School> _schools = [];
   School? _selectedSchool;
   bool _isLoading = false;
@@ -111,6 +111,7 @@ class SchoolProvider extends ChangeNotifier {
       _selectedSchool = await _firebaseService.getSchool(schoolId);
     } catch (e) {
       _error = e.toString();
+      print(e);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -220,7 +221,7 @@ Future<bool> updateSchool({
 
 class ClassProvider extends ChangeNotifier {
   final FirebaseService _firebaseService = FirebaseService();
-  
+
   List<ClassModel> _classes = [];
   ClassModel? _selectedClass;
   bool _isLoading = false;
@@ -365,7 +366,7 @@ class ClassProvider extends ChangeNotifier {
 }
 class StudentProvider extends ChangeNotifier {
   final FirebaseService _firebaseService = FirebaseService();
-  
+
   List<Student> _students = [];
   Student? _selectedStudent;
   bool _isLoading = false;
