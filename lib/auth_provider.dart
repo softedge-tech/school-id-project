@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'firebase_service.dart';
 import 'models.dart';
@@ -148,41 +149,69 @@ class SchoolProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> updateSchool(String schoolId, Map<String, dynamic> data) async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
+Future<bool> updateSchool({
+  required String id,
+  required String name,
+  required String contactNumber,
+  required String location,
+  required String idCardPrefix,
+}) async {
+  try {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
 
-      await _firebaseService.updateSchool(schoolId, data);
-      await loadSchools();
-      return true;
-    } catch (e) {
-      _error = e.toString();
-      return false;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
+    // Firestore update
+    await _firebaseService.updateSchool(id, {
+      'name': name,
+      'contactNumber': contactNumber,
+      'location': location,
+      'idCardPrefix': idCardPrefix,
+    });
+
+    // ✅ Update local list (NO reload)
+    final index = _schools.indexWhere((s) => s.id == id);
+    if (index != -1) {
+      _schools[index] = _schools[index].copyWith(
+        name: name,
+        contactNumber: contactNumber,
+        location: location,
+        idCardPrefix: idCardPrefix,
+      );
     }
-  }
 
-  Future<bool> deleteSchool(String schoolId) async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      await _firebaseService.deleteSchool(schoolId);
-      _schools.removeWhere((s) => s.id == schoolId);
-      return true;
-    } catch (e) {
-      _error = e.toString();
-      return false;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+    return true;
+  } catch (e) {
+    _error = e.toString();
+    return false;
+  } finally {
+    _isLoading = false;
+    notifyListeners();
   }
+}
+
+
+  Future<bool> deleteSchool(String id) async {
+  try {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    // 🔥 Delete from Firestore
+    await _firebaseService.deleteSchool(id);
+
+    // 🔥 Update local list (instant UI update)
+    _schools.removeWhere((s) => s.id == id);
+
+    return true;
+  } catch (e) {
+    _error = e.toString();
+    return false;
+  } finally {
+    _isLoading = false;
+    notifyListeners();
+  }
+}
 
   void clearError() {
     _error = null;
@@ -204,16 +233,27 @@ class ClassProvider extends ChangeNotifier {
   String? get error => _error;
 
   Future<void> loadClasses(String schoolId) async {
+    print('🔍 ClassProvider.loadClasses called for schoolId: $schoolId');
+    
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
+      print('  ⏳ Loading classes from Firebase...');
       _classes = await _firebaseService.getClassesBySchool(schoolId);
+      
+      print('  ✅ Loaded ${_classes.length} classes:');
+      for (var c in _classes) {
+        print('    - ${c.className} (ID: ${c.id}, Active: ${c.isActive})');
+      }
     } catch (e) {
+      print('  ❌ Error loading classes: $e');
       _error = e.toString();
+      _classes = []; // ✅ Clear on error
     } finally {
       _isLoading = false;
+      print('  🏁 Loading complete. isLoading: $_isLoading');
       notifyListeners();
     }
   }
@@ -260,18 +300,32 @@ class ClassProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> updateClass(
-    String schoolId,
-    String classId,
-    Map<String, dynamic> data,
-  ) async {
+  Future<bool> updateClass({
+    required String schoolId,
+    required String classId,
+    required String className,
+  }) async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
-      await _firebaseService.updateClass(schoolId, classId, data);
-      await loadClasses(schoolId);
+      await _firebaseService.updateClass(
+        schoolId,
+        classId,
+        {
+          'className': className,
+          'updatedAt': FieldValue.serverTimestamp(),
+        },
+      );
+
+      final index = _classes.indexWhere((c) => c.id == classId);
+      if (index != -1) {
+        _classes[index] = _classes[index].copyWith(
+          className: className,
+        );
+      }
+
       return true;
     } catch (e) {
       _error = e.toString();
@@ -290,6 +344,7 @@ class ClassProvider extends ChangeNotifier {
 
       await _firebaseService.deleteClass(schoolId, classId);
       _classes.removeWhere((c) => c.id == classId);
+
       return true;
     } catch (e) {
       _error = e.toString();
@@ -309,7 +364,6 @@ class ClassProvider extends ChangeNotifier {
     notifyListeners();
   }
 }
-
 class StudentProvider extends ChangeNotifier {
   final FirebaseService _firebaseService = FirebaseService();
 

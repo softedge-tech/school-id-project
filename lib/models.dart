@@ -103,7 +103,28 @@ class School {
       'isActive': isActive,
     };
   }
+  School copyWith({
+  String? name,
+  String? contactNumber,
+  String? location,
+  String? schoolLoginId,
+  String? idCardPrefix,
+  bool? isActive,
+}) {
+  return School(
+    id: id,
+    name: name ?? this.name,
+    contactNumber: contactNumber ?? this.contactNumber,
+    location: location ?? this.location,
+    schoolLoginId: schoolLoginId ?? this.schoolLoginId,
+    idCardPrefix: idCardPrefix ?? this.idCardPrefix,
+    createdAt: createdAt, // keep original
+    isActive: isActive ?? this.isActive,
+  );
 }
+
+}
+
 
 class ClassModel {
   final String id;
@@ -146,6 +167,24 @@ class ClassModel {
       'isActive': isActive,
     };
   }
+  ClassModel copyWith({
+  String? className,
+  String? teacherLoginId,
+  String? teacherUid,
+  DateTime? createdAt,
+  bool? isActive,
+}) {
+  return ClassModel(
+    id: id,
+    schoolId: schoolId,
+    className: className ?? this.className,
+    teacherLoginId: teacherLoginId ?? this.teacherLoginId,
+    teacherUid: teacherUid ?? this.teacherUid,
+    createdAt: createdAt ?? this.createdAt,
+    isActive: isActive ?? this.isActive,
+  );
+}
+
 }
 
 class Student {
