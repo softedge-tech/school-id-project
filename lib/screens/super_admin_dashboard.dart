@@ -1,6 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../../auth_provider.dart';
 import '../../models.dart';
 
@@ -21,7 +25,6 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Reload schools when returning to this screen
     _loadSchools();
   }
 
@@ -85,15 +88,29 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.admin_panel_settings, color: Colors.white, size: 28),
+                child: const Icon(
+                  Icons.admin_panel_settings,
+                  color: Colors.white,
+                  size: 28,
+                ),
               ),
               const SizedBox(width: 16),
               const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Super Admin Dashboard', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                  Text(
+                    'Super Admin Dashboard',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   SizedBox(height: 4),
-                  Text('Manage all schools and settings', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                  Text(
+                    'Manage all schools and settings',
+                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
                 ],
               ),
               const Spacer(),
@@ -104,16 +121,23 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: theme.primaryColor,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
               IconButton(
                 icon: const Icon(Icons.refresh, color: Colors.white),
                 onPressed: () => context.read<SchoolProvider>().loadSchools(),
-                style: IconButton.styleFrom(backgroundColor: Colors.white.withOpacity(0.2)),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white.withOpacity(0.2),
+                ),
               ),
               const SizedBox(width: 12),
               IconButton(
@@ -122,7 +146,9 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                   await context.read<AuthProvider>().signOut();
                   if (context.mounted) context.go('/login');
                 },
-                style: IconButton.styleFrom(backgroundColor: Colors.white.withOpacity(0.2)),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white.withOpacity(0.2),
+                ),
               ),
             ],
           ),
@@ -136,9 +162,14 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(theme.primaryColor)),
+          CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(theme.primaryColor),
+          ),
           const SizedBox(height: 16),
-          Text('Loading schools...', style: TextStyle(color: Colors.grey.shade600, fontSize: 16)),
+          Text(
+            'Loading schools...',
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+          ),
         ],
       ),
     );
@@ -152,22 +183,44 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
             const SizedBox(height: 16),
-            Text('Error', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.grey.shade800)),
+            Text(
+              'Error',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade800,
+              ),
+            ),
             const SizedBox(height: 8),
-            Text(provider.error!, textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600)),
+            Text(
+              provider.error!,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () => provider.loadSchools(),
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
-              style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12)),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+              ),
             ),
           ],
         ),
@@ -183,22 +236,43 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.school_outlined, size: 80, color: Colors.grey.shade300),
             const SizedBox(height: 24),
-            Text('No Schools Yet', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.grey.shade700)),
+            Text(
+              'No Schools Yet',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade700,
+              ),
+            ),
             const SizedBox(height: 8),
-            Text('Create your first school to get started', style: TextStyle(color: Colors.grey.shade600)),
+            Text(
+              'Create your first school to get started',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
             const SizedBox(height: 32),
             ElevatedButton.icon(
               onPressed: () => _showCreateSchoolDialog(context),
               icon: const Icon(Icons.add),
               label: const Text('Add School'),
-              style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16)),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 16,
+                ),
+              ),
             ),
           ],
         ),
@@ -214,7 +288,14 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
         children: [
           _buildStatsCard(provider, theme),
           const SizedBox(height: 32),
-          Text('All Schools', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.grey.shade800)),
+          Text(
+            'All Schools',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade800,
+            ),
+          ),
           const SizedBox(height: 16),
           Expanded(child: _buildSchoolsTable(provider, theme)),
         ],
@@ -228,7 +309,13 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -237,9 +324,18 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Total Schools', style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
+              Text(
+                'Total Schools',
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+              ),
               const SizedBox(height: 4),
-              Text('${provider.schools.length}', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+              Text(
+                '${provider.schools.length}',
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
         ],
@@ -252,7 +348,13 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -261,8 +363,10 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
             child: ListView.separated(
               padding: EdgeInsets.zero,
               itemCount: provider.schools.length,
-              separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade200),
-              itemBuilder: (context, index) => _buildSchoolRow(provider.schools[index], index, theme),
+              separatorBuilder: (_, __) =>
+                  Divider(height: 1, color: Colors.grey.shade200),
+              itemBuilder: (context, index) =>
+                  _buildSchoolRow(provider.schools[index], index, theme),
             ),
           ),
         ],
@@ -275,7 +379,10 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
-        borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+        ),
       ),
       child: Row(
         children: [
@@ -290,13 +397,22 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     );
   }
 
-  Widget _headerCell(String text, {int? width, int? flex, bool center = false}) {
+  Widget _headerCell(
+    String text, {
+    int? width,
+    int? flex,
+    bool center = false,
+  }) {
     final child = Text(
       text,
       textAlign: center ? TextAlign.center : TextAlign.left,
-      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey.shade700, fontSize: 14),
+      style: TextStyle(
+        fontWeight: FontWeight.bold,
+        color: Colors.grey.shade700,
+        fontSize: 14,
+      ),
     );
-    
+
     if (flex != null) return Expanded(flex: flex, child: child);
     return SizedBox(width: width?.toDouble(), child: child);
   }
@@ -311,12 +427,22 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
             SizedBox(
               width: 60,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: theme.primaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text('${index + 1}', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w600, color: theme.primaryColor)),
+                child: Text(
+                  '${index + 1}',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: theme.primaryColor,
+                  ),
+                ),
               ),
             ),
             Expanded(
@@ -327,24 +453,77 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: [theme.primaryColor, theme.primaryColor.withOpacity(0.7)]),
+                      gradient: LinearGradient(
+                        colors: [
+                          theme.primaryColor,
+                          theme.primaryColor.withOpacity(0.7),
+                        ],
+                      ),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Center(child: Text(school.name[0].toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold))),
+                    child: Center(
+                      child: Text(
+                        school.name[0].toUpperCase(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 12),
-                  Expanded(child: Text(school.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                  Expanded(
+                    child: Text(
+                      school.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
             ),
-            Expanded(flex: 2, child: Text(school.location, style: TextStyle(color: Colors.grey.shade700, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis)),
-            Expanded(flex: 2, child: Text(school.schoolLoginId, style: TextStyle(color: Colors.grey.shade700, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis)),
+            Expanded(
+              flex: 2,
+              child: Text(
+                school.location,
+                style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Text(
+                school.schoolLoginId,
+                style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
             SizedBox(
               width: 100,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(8)),
-                child: Text('0', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w600, color: Colors.blue.shade700)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '0',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.blue.shade700,
+                  ),
+                ),
               ),
             ),
             SizedBox(
@@ -352,9 +531,24 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  IconButton(icon: const Icon(Icons.visibility, size: 20), tooltip: 'View', color: theme.primaryColor, onPressed: () => context.go('/school/${school.id}')),
-                  IconButton(icon: const Icon(Icons.edit, size: 20), tooltip: 'Edit', color: Colors.orange, onPressed: () => _showEditDialog(school)),
-                  IconButton(icon: const Icon(Icons.delete, size: 20), tooltip: 'Delete', color: Colors.red, onPressed: () => _showDeleteDialog(school)),
+                  IconButton(
+                    icon: const Icon(Icons.visibility, size: 20),
+                    tooltip: 'View',
+                    color: theme.primaryColor,
+                    onPressed: () => context.go('/school/${school.id}'),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.edit, size: 20),
+                    tooltip: 'Edit',
+                    color: Colors.orange,
+                    onPressed: () => _showEditDialog(school),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete, size: 20),
+                    tooltip: 'Delete',
+                    color: Colors.red,
+                    onPressed: () => _showDeleteDialog(school),
+                  ),
                 ],
               ),
             ),
@@ -382,32 +576,41 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
       formKey: formKey,
       controllers: controllers,
       showPassword: true,
-      onSubmit: () async {
+
+      // ✅ Empty onSubmit (not used in create mode)
+      onSubmit: () {},
+
+      // ✅ The actual submit handler with image bytes
+      onSubmitWithImages: (frontBytes, backBytes) async {
         if (formKey.currentState!.validate()) {
           final provider = parentContext.read<SchoolProvider>();
-          
+
           print('Creating school...');
+          print('Front bytes: ${frontBytes?.length}');
+          print('Back bytes: ${backBytes?.length}');
+
           final success = await provider.createSchool(
             name: controllers['name']!.text.trim(),
             contactNumber: controllers['contact']!.text.trim(),
             location: controllers['location']!.text.trim(),
             idCardPrefix: controllers['prefix']!.text.trim(),
             password: controllers['password']!.text,
+            idCardFrontBytes: frontBytes, // ✅ Now receives bytes from dialog
+            idCardBackBytes: backBytes, // ✅ Now receives bytes from dialog
           );
-          
+
           print('Create success: $success');
-          print('Provider schools count: ${provider.schools.length}');
-          
+
           if (parentContext.mounted) {
             Navigator.of(parentContext).pop();
             if (success) {
-              _showSnackbar(parentContext, 'School created successfully', Colors.green);
-              // Force reload the schools list
-              print('Reloading schools...');
+              _showSnackbar(
+                parentContext,
+                'School created successfully',
+                Colors.green,
+              );
               await provider.loadSchools();
-              print('After reload, schools count: ${provider.schools.length}');
             } else if (provider.error != null) {
-              print('Error: ${provider.error}');
               _showSnackbar(parentContext, provider.error!, Colors.red);
             }
           }
@@ -433,18 +636,11 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
       formKey: formKey,
       controllers: controllers,
       showPassword: false,
+
+      // ✅ Add this for edit mode
       onSubmit: () async {
         if (formKey.currentState!.validate()) {
           // TODO: Implement update logic
-          // final provider = context.read<SchoolProvider>();
-          // await provider.updateSchool(
-          //   id: school.id,
-          //   name: controllers['name']!.text.trim(),
-          //   contactNumber: controllers['contact']!.text.trim(),
-          //   location: controllers['location']!.text.trim(),
-          //   idCardPrefix: controllers['prefix']!.text.trim(),
-          // );
-          
           if (context.mounted) {
             Navigator.pop(context);
             _showSnackbar(context, 'School updated successfully', Colors.green);
@@ -452,37 +648,70 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           }
         }
       },
+
+      // ✅ Add empty callback (required parameter)
+      onSubmitWithImages: (frontBytes, backBytes) {},
     );
   }
 
   void _showDeleteDialog(dynamic school) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.red.shade400, size: 28),
+            Icon(
+              Icons.warning_amber_rounded,
+              color: Colors.red.shade400,
+              size: 28,
+            ),
             const SizedBox(width: 12),
             const Text('Delete School'),
           ],
         ),
-        content: Text('Are you sure you want to delete "${school.name}"? This action cannot be undone.'),
+        content: Text(
+          'Are you sure you want to delete "${school.name}"? This action cannot be undone.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () async {
-              // TODO: Implement delete logic
-              // final provider = context.read<SchoolProvider>();
-              // await provider.deleteSchool(school.id);
-              
-              Navigator.pop(ctx);
-              if (mounted) {
-                _showSnackbar(context, 'School deleted successfully', Colors.red);
-                await context.read<SchoolProvider>().loadSchools();
+              final provider = context.read<SchoolProvider>();
+
+              print('Deleting school...');
+              final success = await provider.deleteSchool(school.id);
+              print('Delete success: $success');
+
+              if (dialogContext.mounted) {
+                Navigator.pop(dialogContext);
+              }
+
+              if (context.mounted) {
+                if (success) {
+                  _showSnackbar(
+                    context,
+                    'School deleted successfully',
+                    Colors.red,
+                  );
+                  print('Reloading schools...');
+                  await provider.loadSchools();
+                  print(
+                    'After reload, schools count: ${provider.schools.length}',
+                  );
+                } else if (provider.error != null) {
+                  print('Error: ${provider.error}');
+                  _showSnackbar(context, provider.error!, Colors.red);
+                }
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Delete'),
           ),
         ],
@@ -499,87 +728,312 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     required Map<String, TextEditingController> controllers,
     required bool showPassword,
     required VoidCallback onSubmit,
+    required Function(Uint8List? frontBytes, Uint8List? backBytes)
+    onSubmitWithImages,
   }) {
+    // ✅ DECLARE VARIABLES HERE (outside StatefulBuilder)
+    Uint8List? idCardFrontBytes;
+    Uint8List? idCardBackBytes;
+
     showDialog(
       context: context,
-      builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 500),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [headerColor, headerColor.withOpacity(0.8)]),
-                  borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
-                ),
-                child: Row(
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (dialogContext, dialogSetState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
+                    // HEADER
                     Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(10)),
-                      child: Icon(icon, color: Colors.white, size: 24),
-                    ),
-                    const SizedBox(width: 16),
-                    Text(title, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ),
-              Flexible(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Form(
-                    key: formKey,
-                    child: Column(
-                      children: [
-                        _buildTextField(controllers['name']!, 'School Name', Icons.school, context),
-                        const SizedBox(height: 16),
-                        _buildTextField(controllers['contact']!, 'Contact Number', Icons.phone, context, keyboardType: TextInputType.phone),
-                        const SizedBox(height: 16),
-                        _buildTextField(controllers['location']!, 'Location', Icons.location_on, context),
-                        const SizedBox(height: 16),
-                        _buildTextField(controllers['prefix']!, 'ID Card Prefix', Icons.badge, context, hint: 'e.g., SCH001'),
-                        if (showPassword) ...[
-                          const SizedBox(height: 16),
-                          _buildTextField(controllers['password']!, 'Admin Password', Icons.lock, context, obscure: true, minLength: 6),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-                    const SizedBox(width: 12),
-                    ElevatedButton(
-                      onPressed: onSubmit,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: headerColor == Colors.orange ? Colors.orange : null,
-                        foregroundColor: headerColor == Colors.orange ? Colors.white : null,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [headerColor, headerColor.withOpacity(0.8)],
+                        ),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20),
+                        ),
                       ),
-                      child: Text(showPassword ? 'Create' : 'Update'),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(icon, color: Colors.white),
+                          ),
+                          const SizedBox(width: 16),
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // BODY
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(24),
+                        child: Form(
+                          key: formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildTextField(
+                                controllers['name']!,
+                                'School Name',
+                                Icons.school,
+                                context,
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTextField(
+                                controllers['contact']!,
+                                'Contact Number',
+                                Icons.phone,
+                                context,
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTextField(
+                                controllers['location']!,
+                                'Location',
+                                Icons.location_on,
+                                context,
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTextField(
+                                controllers['prefix']!,
+                                'ID Card Prefix',
+                                Icons.badge,
+                                context,
+                              ),
+
+                              if (showPassword) ...[
+                                const SizedBox(height: 16),
+                                _buildTextField(
+                                  controllers['password']!,
+                                  'Admin Password',
+                                  Icons.lock,
+                                  context,
+                                  obscure: true,
+                                ),
+
+                                const SizedBox(height: 24),
+                                const Text(
+                                  'ID Card Theme Images',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+
+                                // ✅ FRONT IMAGE
+                                _buildImagePicker(
+                                  label: 'ID Card Front',
+                                  imageBytes: idCardFrontBytes,
+                                  context: context,
+                                  onPick: () async {
+                                    final picker = ImagePicker();
+                                    final image = await picker.pickImage(
+                                      source: ImageSource.gallery,
+                                      imageQuality: 85,
+                                    );
+                                    if (image != null) {
+                                      final bytes = await image.readAsBytes();
+                                      dialogSetState(() {
+                                        idCardFrontBytes = bytes;
+                                      });
+                                    }
+                                  },
+                                ),
+
+                                const SizedBox(height: 16),
+
+                                // ✅ BACK IMAGE
+                                _buildImagePicker(
+                                  label: 'ID Card Back',
+                                  imageBytes: idCardBackBytes,
+                                  context: context,
+                                  onPick: () async {
+                                    final picker = ImagePicker();
+                                    final image = await picker.pickImage(
+                                      source: ImageSource.gallery,
+                                      imageQuality: 85,
+                                    );
+                                    if (image != null) {
+                                      final bytes = await image.readAsBytes();
+                                      dialogSetState(() {
+                                        idCardBackBytes = bytes;
+                                      });
+                                    }
+                                  },
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // FOOTER
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            child: const Text('Cancel'),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton(
+                            onPressed: () {
+                              // 🔜 NEXT STEP: pass bytes here
+                              onSubmitWithImages(
+                                idCardFrontBytes,
+                                idCardBackBytes,
+                              );
+                              onSubmit();
+                            },
+                            child: Text(showPassword ? 'Create' : 'Update'),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
+            );
+          },
+        );
+      },
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label, IconData icon, BuildContext context, {String? hint, bool obscure = false, TextInputType? keyboardType, int? minLength}) {
+  Widget _buildImagePicker({
+    required String label,
+    required Uint8List? imageBytes, // ✅ NEW
+
+    required VoidCallback onPick,
+    required BuildContext context,
+  }) {
+    final theme = Theme.of(context);
+    print('Preview bytes length: ${imageBytes?.length}');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey.shade700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: onPick,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            height: 180,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              border: Border.all(
+                color: imageBytes != null
+                    ? theme.primaryColor
+                    : Colors.grey.shade300,
+                width: 2,
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: imageBytes != null
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Stack(
+                      children: [
+                        Image.memory(
+                          imageBytes, // ✅ use bytes
+                          width: double.infinity,
+                          height: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
+
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.6),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.edit,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.add_photo_alternate_outlined,
+                        size: 48,
+                        color: Colors.grey.shade400,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Tap to upload image',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Recommended: 1024x640 px',
+                        style: TextStyle(
+                          color: Colors.grey.shade500,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTextField(
+    TextEditingController controller,
+    String label,
+    IconData icon,
+    BuildContext context, {
+    String? hint,
+    bool obscure = false,
+    TextInputType? keyboardType,
+    int? minLength,
+  }) {
     final theme = Theme.of(context);
     return TextFormField(
       controller: controller,
@@ -589,15 +1043,26 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
         prefixIcon: Icon(icon, color: theme.primaryColor),
         filled: true,
         fillColor: Colors.grey.shade50,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.primaryColor, width: 2)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade200),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: theme.primaryColor, width: 2),
+        ),
       ),
       obscureText: obscure,
       keyboardType: keyboardType,
       validator: (v) {
         if (v?.isEmpty ?? true) return 'Required';
-        if (minLength != null && v!.length < minLength) return 'Min $minLength characters';
+        if (minLength != null && v!.length < minLength) {
+          return 'Min $minLength characters';
+        }
         return null;
       },
     );
