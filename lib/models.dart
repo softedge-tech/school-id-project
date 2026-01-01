@@ -1,10 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum UserRole {
-  superAdmin,
-  schoolAdmin,
-  teacher,
-}
+enum UserRole { superAdmin, schoolAdmin, teacher }
 
 class UserModel {
   final String uid;
@@ -65,6 +61,11 @@ class School {
   final String location;
   final String schoolLoginId;
   final String idCardPrefix;
+
+  // ✅ NEW
+  final String? frontIdCardUrl;
+  final String? backIdCardUrl;
+
   final DateTime createdAt;
   final bool isActive;
 
@@ -75,10 +76,13 @@ class School {
     required this.location,
     required this.schoolLoginId,
     required this.idCardPrefix,
+    this.frontIdCardUrl, // ✅
+    this.backIdCardUrl, // ✅
     required this.createdAt,
     this.isActive = true,
   });
 
+  /// ✅ Existing factory (SAFE for current usage)
   factory School.fromMap(Map<String, dynamic> map, String id) {
     return School(
       id: id,
@@ -87,11 +91,20 @@ class School {
       location: map['location'] ?? '',
       schoolLoginId: map['schoolLoginId'] ?? '',
       idCardPrefix: map['idCardPrefix'] ?? '',
+      frontIdCardUrl: map['frontIdCardUrl'], // ✅
+      backIdCardUrl: map['backIdCardUrl'], // ✅
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       isActive: map['isActive'] ?? true,
     );
   }
 
+  /// ✅ Optional Firestore snapshot factory (modern usage)
+  factory School.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return School.fromMap(data, doc.id);
+  }
+
+  /// ✅ Updated toMap
   Map<String, dynamic> toMap() {
     return {
       'name': name,
@@ -99,32 +112,38 @@ class School {
       'location': location,
       'schoolLoginId': schoolLoginId,
       'idCardPrefix': idCardPrefix,
+      'frontIdCardUrl': frontIdCardUrl, // ✅
+      'backIdCardUrl': backIdCardUrl, // ✅
       'createdAt': Timestamp.fromDate(createdAt),
       'isActive': isActive,
     };
   }
+
+  /// ✅ Updated copyWith
   School copyWith({
-  String? name,
-  String? contactNumber,
-  String? location,
-  String? schoolLoginId,
-  String? idCardPrefix,
-  bool? isActive,
-}) {
-  return School(
-    id: id,
-    name: name ?? this.name,
-    contactNumber: contactNumber ?? this.contactNumber,
-    location: location ?? this.location,
-    schoolLoginId: schoolLoginId ?? this.schoolLoginId,
-    idCardPrefix: idCardPrefix ?? this.idCardPrefix,
-    createdAt: createdAt, // keep original
-    isActive: isActive ?? this.isActive,
-  );
+    String? name,
+    String? contactNumber,
+    String? location,
+    String? schoolLoginId,
+    String? idCardPrefix,
+    String? frontIdCardUrl,
+    String? backIdCardUrl,
+    bool? isActive,
+  }) {
+    return School(
+      id: id,
+      name: name ?? this.name,
+      contactNumber: contactNumber ?? this.contactNumber,
+      location: location ?? this.location,
+      schoolLoginId: schoolLoginId ?? this.schoolLoginId,
+      idCardPrefix: idCardPrefix ?? this.idCardPrefix,
+      frontIdCardUrl: frontIdCardUrl ?? this.frontIdCardUrl,
+      backIdCardUrl: backIdCardUrl ?? this.backIdCardUrl,
+      createdAt: createdAt,
+      isActive: isActive ?? this.isActive,
+    );
+  }
 }
-
-}
-
 
 class ClassModel {
   final String id;
@@ -167,24 +186,24 @@ class ClassModel {
       'isActive': isActive,
     };
   }
-  ClassModel copyWith({
-  String? className,
-  String? teacherLoginId,
-  String? teacherUid,
-  DateTime? createdAt,
-  bool? isActive,
-}) {
-  return ClassModel(
-    id: id,
-    schoolId: schoolId,
-    className: className ?? this.className,
-    teacherLoginId: teacherLoginId ?? this.teacherLoginId,
-    teacherUid: teacherUid ?? this.teacherUid,
-    createdAt: createdAt ?? this.createdAt,
-    isActive: isActive ?? this.isActive,
-  );
-}
 
+  ClassModel copyWith({
+    String? className,
+    String? teacherLoginId,
+    String? teacherUid,
+    DateTime? createdAt,
+    bool? isActive,
+  }) {
+    return ClassModel(
+      id: id,
+      schoolId: schoolId,
+      className: className ?? this.className,
+      teacherLoginId: teacherLoginId ?? this.teacherLoginId,
+      teacherUid: teacherUid ?? this.teacherUid,
+      createdAt: createdAt ?? this.createdAt,
+      isActive: isActive ?? this.isActive,
+    );
+  }
 }
 
 class Student {
@@ -262,9 +281,7 @@ class Student {
           ? Timestamp.fromDate(dateOfBirth!)
           : null,
       'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': updatedAt != null
-          ? Timestamp.fromDate(updatedAt!)
-          : null,
+      'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
       'isDeleted': isDeleted,
     };
   }

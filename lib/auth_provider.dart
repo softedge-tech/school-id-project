@@ -137,55 +137,65 @@ class SchoolProvider extends ChangeNotifier {
   }
 
   Future<bool> createSchool({
-    required String name,
-    required String contactNumber,
-    required String location,
-    required String idCardPrefix,
-    required String password,
-     Uint8List? idCardFrontBytes,
-    Uint8List? idCardBackBytes,
-  }) async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-String? frontImageUrl;
-      String? backImageUrl;
- // Upload front image
-      if (idCardFrontBytes != null) {
-        frontImageUrl = await _uploadImageBytes(
-          bytes: idCardFrontBytes,
-          path: 'schools/$idCardPrefix/id_card_front.jpg',
-        );
-      }
+  required String name,
+  required String contactNumber,
+  required String location,
+  required String idCardPrefix,
+  required String password,
+  Uint8List? idCardFrontBytes,
+  Uint8List? idCardBackBytes,
+}) async {
+  try {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    
+    String? frontImageUrl;
+    String? backImageUrl;
 
-      // Upload back image
-      if (idCardBackBytes != null) {
-        backImageUrl = await _uploadImageBytes(
-          bytes: idCardBackBytes,
-          path: 'schools/$idCardPrefix/id_card_back.jpg',
-        );
-      }
-
-      final school = await _firebaseService.createSchool(
-        name: name,
-        contactNumber: contactNumber,
-        location: location,
-        idCardPrefix: idCardPrefix,
-        password: password,
-        
+    // Upload front image
+    if (idCardFrontBytes != null) {
+      print('Uploading front image...');
+      frontImageUrl = await _uploadImageBytes(
+        bytes: idCardFrontBytes,
+        path: 'schools/$idCardPrefix/id_card_front.jpg',
       );
-
-      _schools.insert(0, school);
-      return true;
-    } catch (e) {
-      _error = e.toString();
-      return false;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
+      print('Front image uploaded: $frontImageUrl');
     }
+
+    // Upload back image
+    if (idCardBackBytes != null) {
+      print('Uploading back image...');
+      backImageUrl = await _uploadImageBytes(
+        bytes: idCardBackBytes,
+        path: 'schools/$idCardPrefix/id_card_back.jpg',
+      );
+      print('Back image uploaded: $backImageUrl');
+    }
+
+    print('Creating school in Firestore...');
+    final school = await _firebaseService.createSchool(
+      name: name,
+      contactNumber: contactNumber,
+      location: location,
+      idCardPrefix: idCardPrefix,
+      password: password,
+      frontIdCardUrl: frontImageUrl,  // ✅ Pass URLs to Firestore
+      backIdCardUrl: backImageUrl,     // ✅ Pass URLs to Firestore
+    );
+
+    _schools.insert(0, school);
+    print('School created successfully!');
+    return true;
+  } catch (e) {
+    print('❌ ERROR creating school: $e');  // ✅ See the actual error
+    _error = e.toString();
+    return false;
+  } finally {
+    _isLoading = false;
+    notifyListeners();
   }
+}
 
 Future<bool> updateSchool({
   required String id,

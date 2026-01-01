@@ -4,9 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 import '../../auth_provider.dart';
-import '../../models.dart';
 
 class SuperAdminDashboard extends StatefulWidget {
   const SuperAdminDashboard({super.key});
@@ -890,6 +888,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                     ),
 
                     // FOOTER
+                    // FOOTER
                     Container(
                       padding: const EdgeInsets.all(24),
                       child: Row(
@@ -900,16 +899,48 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                             child: const Text('Cancel'),
                           ),
                           const SizedBox(width: 12),
-                          ElevatedButton(
-                            onPressed: () {
-                              // 🔜 NEXT STEP: pass bytes here
-                              onSubmitWithImages(
-                                idCardFrontBytes,
-                                idCardBackBytes,
+                          StatefulBuilder(
+                            builder: (context, setButtonState) {
+                              bool isSubmitting = false;
+
+                              return ElevatedButton(
+                                onPressed: isSubmitting
+                                    ? null
+                                    : () async {
+                                        setButtonState(
+                                          () => isSubmitting = true,
+                                        );
+
+                                        if (showPassword) {
+                                          // Create mode
+                                          await onSubmitWithImages(
+                                            idCardFrontBytes,
+                                            idCardBackBytes,
+                                          );
+                                        } else {
+                                          // Edit mode
+                                          onSubmit();
+                                        }
+
+                                        setButtonState(
+                                          () => isSubmitting = false,
+                                        );
+                                      },
+                                child: isSubmitting
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.white,
+                                              ),
+                                        ),
+                                      )
+                                    : Text(showPassword ? 'Create' : 'Update'),
                               );
-                              onSubmit();
                             },
-                            child: Text(showPassword ? 'Create' : 'Update'),
                           ),
                         ],
                       ),
@@ -966,13 +997,13 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                     borderRadius: BorderRadius.circular(10),
                     child: Stack(
                       children: [
-                        Image.memory(
-                          imageBytes, // ✅ use bytes
-                          width: double.infinity,
-                          height: double.infinity,
-                          fit: BoxFit.cover,
+                        Center(
+                          // ✅ Add Center widget
+                          child: Image.memory(
+                            imageBytes,
+                            // fit: BoxFit.fitHeight,
+                          ),
                         ),
-
                         Positioned(
                           top: 8,
                           right: 8,

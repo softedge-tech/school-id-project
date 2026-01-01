@@ -62,51 +62,66 @@ class FirebaseService {
 
   // ========== SCHOOL OPERATIONS ==========
 
-  Future<School> createSchool({
-    required String name,
-    required String contactNumber,
-    required String location,
-    required String idCardPrefix,
-    required String password,
-  }) async {
-    try {
-      final schoolId = _firestore.collection('schools').doc().id;
-      final schoolLoginId = 'SCHOOL${DateTime.now().millisecondsSinceEpoch}';
+ Future<School> createSchool({
+  required String name,
+  required String contactNumber,
+  required String location,
+  required String idCardPrefix,
+  required String password,
+  String? frontIdCardUrl, // ✅ NEW
+  String? backIdCardUrl,  // ✅ NEW
+}) async {
+  try {
+    // Generate IDs
+    final schoolId = _firestore.collection('schools').doc().id;
+    final schoolLoginId =
+        '${idCardPrefix.toUpperCase()}_${DateTime.now().millisecondsSinceEpoch}';
 
-      // Create school admin user
-      final userCredential = await _auth.createUserWithEmailAndPassword(
-        email: '$schoolLoginId@school.portal',
-        password: password,
-      );
+    final email = '$schoolLoginId@school.portal';
 
-      final school = School(
-        id: schoolId,
-        name: name,
-        contactNumber: contactNumber,
-        location: location,
-        schoolLoginId: schoolLoginId,
-        idCardPrefix: idCardPrefix,
-        createdAt: DateTime.now(),
-      );
+    // 🔐 Create school admin auth account
+    final userCredential = await _auth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
 
-      // Save school data
-      await _firestore.collection('schools').doc(schoolId).set(school.toMap());
+    final school = School(
+      id: schoolId,
+      name: name,
+      contactNumber: contactNumber,
+      location: location,
+      schoolLoginId: schoolLoginId,
+      idCardPrefix: idCardPrefix,
+      frontIdCardUrl: frontIdCardUrl, // ✅
+      backIdCardUrl: backIdCardUrl,   // ✅
+      createdAt: DateTime.now(),
+    );
 
-      // Save user data
-      await _firestore.collection('users').doc(userCredential.user!.uid).set({
-        'email': '$schoolLoginId@school.portal',
-        'role': 'school_admin',
-        'schoolId': schoolId,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+    // 🏫 Save school data
+    await _firestore.collection('schools').doc(schoolId).set({
+      ...school.toMap(),
+      'frontIdCardUrl': frontIdCardUrl,
+      'backIdCardUrl': backIdCardUrl,
+      'isDeleted': false,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
 
-      return school;
-    } on FirebaseAuthException catch (e) {
-      throw _handleAuthException(e);
-    } catch (e) {
-      throw 'Failed to create school: ${e.toString()}';
-    }
+    // 👤 Save user data
+    await _firestore.collection('users').doc(userCredential.user!.uid).set({
+      'email': email,
+      'role': 'school_admin',
+      'schoolId': schoolId,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    return school;
+  } on FirebaseAuthException catch (e) {
+    throw _handleAuthException(e);
+  } catch (e) {
+    throw 'Failed to create school: ${e.toString()}';
   }
+}
+
 
   Future<void> updateSchool(String schoolId, Map<String, dynamic> data) async {
     try {
