@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'firebase_service.dart';
 import 'models.dart';
@@ -117,6 +120,21 @@ class SchoolProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+   // UPLOAD IMAGE (Uint8List)
+ 
+  Future<String> _uploadImageBytes({
+    required Uint8List bytes,
+    required String path,
+  }) async {
+    final ref = FirebaseStorage.instance.ref(path);
+
+    final task = await ref.putData(
+      bytes,
+      SettableMetadata(contentType: 'image/jpeg'),
+    );
+
+    return await task.ref.getDownloadURL();
+  }
 
   Future<bool> createSchool({
     required String name,
@@ -124,11 +142,30 @@ class SchoolProvider extends ChangeNotifier {
     required String location,
     required String idCardPrefix,
     required String password,
+     Uint8List? idCardFrontBytes,
+    Uint8List? idCardBackBytes,
   }) async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
+String? frontImageUrl;
+      String? backImageUrl;
+ // Upload front image
+      if (idCardFrontBytes != null) {
+        frontImageUrl = await _uploadImageBytes(
+          bytes: idCardFrontBytes,
+          path: 'schools/$idCardPrefix/id_card_front.jpg',
+        );
+      }
+
+      // Upload back image
+      if (idCardBackBytes != null) {
+        backImageUrl = await _uploadImageBytes(
+          bytes: idCardBackBytes,
+          path: 'schools/$idCardPrefix/id_card_back.jpg',
+        );
+      }
 
       final school = await _firebaseService.createSchool(
         name: name,
@@ -136,6 +173,7 @@ class SchoolProvider extends ChangeNotifier {
         location: location,
         idCardPrefix: idCardPrefix,
         password: password,
+        
       );
 
       _schools.insert(0, school);

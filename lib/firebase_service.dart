@@ -108,43 +108,41 @@ class FirebaseService {
     }
   }
 
- Future<void> updateSchool(String schoolId, Map<String, dynamic> data) async {
-  try {
-    await _firestore.collection('schools').doc(schoolId).update({
-      ...data,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-  } catch (e) {
-    throw Exception('Failed to update school: $e');
+  Future<void> updateSchool(String schoolId, Map<String, dynamic> data) async {
+    try {
+      await _firestore.collection('schools').doc(schoolId).update({
+        ...data,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception('Failed to update school: $e');
+    }
   }
-}
-
 
   Future<void> deleteSchool(String schoolId) async {
-  try {
-    await _firestore.collection('schools').doc(schoolId).delete();
-  } catch (e) {
-    throw Exception('Failed to delete school: $e');
+    try {
+      await _firestore.collection('schools').doc(schoolId).delete();
+    } catch (e) {
+      throw Exception('Failed to delete school: $e');
+    }
   }
-}
 
+  Future<List<School>> getAllSchools() async {
+    try {
+      final snapshot = await _firestore
+          .collection('schools')
+          .orderBy('createdAt', descending: true)
+          .get();
 
- Future<List<School>> getAllSchools() async {
-  try {
-    final snapshot = await _firestore
-        .collection('schools')
-        .orderBy('createdAt', descending: true)
-        .get();
-
-    // Filter active schools in code instead of Firestore
-    return snapshot.docs
-        .map((doc) => School.fromMap(doc.data(), doc.id))
-        .where((school) => school.isActive ?? true) // Filter in memory
-        .toList();
-  } catch (e) {
-    throw 'Failed to fetch schools: ${e.toString()}';
+      // Filter active schools in code instead of Firestore
+      return snapshot.docs
+          .map((doc) => School.fromMap(doc.data(), doc.id))
+          .where((school) => school.isActive ?? true) // Filter in memory
+          .toList();
+    } catch (e) {
+      throw 'Failed to fetch schools: ${e.toString()}';
+    }
   }
-}
 
   Future<School?> getSchool(String schoolId) async {
     try {
@@ -161,60 +159,60 @@ class FirebaseService {
   // ========== CLASS OPERATIONS ==========
 
   Future<ClassModel> createClass({
-  required String schoolId,
-  required String className,
-  required String password,
-}) async {
-  try {
-    final classId = _firestore
-        .collection('schools')
-        .doc(schoolId)
-        .collection('classes')
-        .doc()
-        .id;
+    required String schoolId,
+    required String className,
+    required String password,
+  }) async {
+    try {
+      final classId = _firestore
+          .collection('schools')
+          .doc(schoolId)
+          .collection('classes')
+          .doc()
+          .id;
 
-    final teacherLoginId = 'CLASS${DateTime.now().millisecondsSinceEpoch}';
+      final teacherLoginId = 'CLASS${DateTime.now().millisecondsSinceEpoch}';
 
-    // Create teacher user
-    final userCredential = await _auth.createUserWithEmailAndPassword(
-      email: '$teacherLoginId@teacher.portal',
-      password: password,
-    );
+      // Create teacher user
+      final userCredential = await _auth.createUserWithEmailAndPassword(
+        email: '$teacherLoginId@teacher.portal',
+        password: password,
+      );
 
-    final classModel = ClassModel(
-      id: classId,
-      schoolId: schoolId,
-      className: className,
-      teacherLoginId: teacherLoginId,
-      teacherUid: userCredential.user!.uid,
-      createdAt: DateTime.now(),
-      isActive: true, // ✅ Explicitly set this
-    );
+      final classModel = ClassModel(
+        id: classId,
+        schoolId: schoolId,
+        className: className,
+        teacherLoginId: teacherLoginId,
+        teacherUid: userCredential.user!.uid,
+        createdAt: DateTime.now(),
+        isActive: true, // ✅ Explicitly set this
+      );
 
-    // Save class data with isActive field
-    await _firestore
-        .collection('schools')
-        .doc(schoolId)
-        .collection('classes')
-        .doc(classId)
-        .set(classModel.toMap()); // toMap() should include isActive
+      // Save class data with isActive field
+      await _firestore
+          .collection('schools')
+          .doc(schoolId)
+          .collection('classes')
+          .doc(classId)
+          .set(classModel.toMap()); // toMap() should include isActive
 
-    // Save teacher user data
-    await _firestore.collection('users').doc(userCredential.user!.uid).set({
-      'email': '$teacherLoginId@teacher.portal',
-      'role': 'teacher',
-      'schoolId': schoolId,
-      'classId': classId,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+      // Save teacher user data
+      await _firestore.collection('users').doc(userCredential.user!.uid).set({
+        'email': '$teacherLoginId@teacher.portal',
+        'role': 'teacher',
+        'schoolId': schoolId,
+        'classId': classId,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
 
-    return classModel;
-  } on FirebaseAuthException catch (e) {
-    throw _handleAuthException(e);
-  } catch (e) {
-    throw 'Failed to create class: ${e.toString()}';
+      return classModel;
+    } on FirebaseAuthException catch (e) {
+      throw _handleAuthException(e);
+    } catch (e) {
+      throw 'Failed to create class: ${e.toString()}';
+    }
   }
-}
 
   Future<void> updateClass(
     String schoolId,
@@ -250,34 +248,32 @@ class FirebaseService {
     }
   }
 
- Future<List<ClassModel>> getClassesBySchool(String schoolId) async {
-  try {
-    print('📡 Firebase: getClassesBySchool($schoolId)');
-    
-    final snapshot = await _firestore
-        .collection('schools')
-        .doc(schoolId)
-        .collection('classes')
-        // ✅ REMOVE THIS LINE IF IT EXISTS:
-        // .where('isActive', isEqualTo: true)
-        .orderBy('createdAt', descending: true)
-        .get();
+  Future<List<ClassModel>> getClassesBySchool(String schoolId) async {
+    try {
+      print('📡 Firebase: getClassesBySchool($schoolId)');
 
-    print('  📦 Got ${snapshot.docs.length} documents from Firestore');
-    
-    final classes = snapshot.docs
-        .map((doc) {
-          print('    - Doc ID: ${doc.id}, Data: ${doc.data()}');
-          return ClassModel.fromMap(doc.data(), doc.id);
-        })
-        .toList();
-    
-    return classes;
-  } catch (e) {
-    print('  ❌ Error in getClassesBySchool: $e');
-    rethrow;
+      final snapshot = await _firestore
+          .collection('schools')
+          .doc(schoolId)
+          .collection('classes')
+          // ✅ REMOVE THIS LINE IF IT EXISTS:
+          // .where('isActive', isEqualTo: true)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      print('  📦 Got ${snapshot.docs.length} documents from Firestore');
+
+      final classes = snapshot.docs.map((doc) {
+        print('    - Doc ID: ${doc.id}, Data: ${doc.data()}');
+        return ClassModel.fromMap(doc.data(), doc.id);
+      }).toList();
+
+      return classes;
+    } catch (e) {
+      print('  ❌ Error in getClassesBySchool: $e');
+      rethrow;
+    }
   }
-}
 
   Future<ClassModel?> getClass(String schoolId, String classId) async {
     try {
