@@ -1,6 +1,15 @@
+import 'dart:async';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
+import 'package:archive/archive.dart';
 import '../../auth_provider.dart';
+import 'dart:html' as html;
+import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class ClassDetailScreen extends StatefulWidget {
   final String schoolId;
@@ -17,6 +26,10 @@ class ClassDetailScreen extends StatefulWidget {
 }
 
 class _ClassDetailScreenState extends State<ClassDetailScreen> {
+  final GlobalKey _idCardKey = GlobalKey();
+  bool _isGeneratingCards = false;
+  Map<String, Uint8List> _imageCache = {};
+
   @override
   void initState() {
     super.initState();
@@ -24,6 +37,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
   }
 
   Future<void> _loadData() async {
+    await context.read<SchoolProvider>().loadSchool(widget.schoolId);
     await context.read<ClassProvider>().loadClass(
       widget.schoolId,
       widget.classId,
@@ -32,6 +46,107 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       widget.schoolId,
       widget.classId,
     );
+  }
+
+  // Demo data for testing
+  List<Map<String, dynamic>> _getDemoStudents() {
+    return [
+      {
+        'id': 'demo1',
+        'name': 'Ahmed Ali Hassan',
+        'rollNumber': '001',
+        'fatherName': 'Ali Hassan Mohammed',
+        'motherName': 'Fatima Ahmed',
+        'contactNumber': '+971 50 123 4567',
+        'bloodGroup': 'O+',
+        'address': 'Al Khalidiya, Abu Dhabi, UAE',
+        'photoUrl': 'https://via.placeholder.com/300',
+      },
+      {
+        'id': 'demo2',
+        'name': 'Sara Mohammed',
+        'rollNumber': '002',
+        'fatherName': 'Mohammed Abdullah',
+        'motherName': 'Aisha Mohammed',
+        'contactNumber': '+971 52 234 5678',
+        'bloodGroup': 'A+',
+        'address': 'Al Reem Island, Abu Dhabi, UAE',
+        'photoUrl': 'https://via.placeholder.com/300',
+      },
+      {
+        'id': 'demo3',
+        'name': 'Omar Khalid',
+        'rollNumber': '003',
+        'fatherName': 'Khalid Ibrahim',
+        'motherName': 'Noura Khalid',
+        'contactNumber': '+971 55 345 6789',
+        'bloodGroup': 'B+',
+        'address': 'Khalifa City, Abu Dhabi, UAE',
+        'photoUrl': 'https://via.placeholder.com/300',
+      },
+      {
+        'id': 'demo4',
+        'name': 'Layla Hassan',
+        'rollNumber': '004',
+        'fatherName': 'Hassan Ahmad',
+        'motherName': 'Mariam Hassan',
+        'contactNumber': '+971 56 456 7890',
+        'bloodGroup': 'AB+',
+        'address': 'Al Mushrif, Abu Dhabi, UAE',
+        'photoUrl': 'https://via.placeholder.com/300',
+      },
+      {
+        'id': 'demo5',
+        'name': 'Yousef Abdullah',
+        'rollNumber': '005',
+        'fatherName': 'Abdullah Saeed',
+        'motherName': 'Huda Abdullah',
+        'contactNumber': '+971 50 567 8901',
+        'bloodGroup': 'O-',
+        'address': 'Al Bateen, Abu Dhabi, UAE',
+        'photoUrl': 'https://via.placeholder.com/300',
+      },
+    ];
+  }
+  // Future<void> _loadData() async {
+  //   await context.read<SchoolProvider>().loadSchool(widget.schoolId);
+  //   await context.read<ClassProvider>().loadClasses(widget.schoolId);
+  // }
+  // final Map<String, Uint8List> _imageCache = {};
+
+  Future<Uint8List?> _loadImageFromUrl(String path) async {
+    if (_imageCache.containsKey(path)) {
+      return _imageCache[path];
+    }
+
+    try {
+      ByteData data;
+
+      // ✅ Local asset
+      if (path.startsWith('assets/')) {
+        data = await rootBundle.load(path);
+      }
+      // ✅ Network image (Firebase / HTTPS)
+      else if (path.startsWith('http://') || path.startsWith('https://')) {
+        final bundle = NetworkAssetBundle(Uri.parse(path));
+        data = await bundle.load(path);
+      }
+      // ❌ Invalid path
+      else {
+        debugPrint('Invalid image path: $path');
+        return null;
+      }
+
+      final bytes = data.buffer.asUint8List();
+
+      if (bytes.length < 100) return null;
+
+      _imageCache[path] = bytes;
+      return bytes;
+    } catch (e) {
+      debugPrint('Image load failed: $e');
+      return null;
+    }
   }
 
   @override
@@ -107,6 +222,25 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
               ),
             );
           }
+
+          // Use demo data if no students in database
+          final students = studentProvider.students.isEmpty
+              ? _getDemoStudents()
+              : studentProvider.students
+                    .map(
+                      (s) => {
+                        'id': s.id,
+                        'name': s.name,
+                        'rollNumber': s.rollNumber,
+                        'fatherName': s.fatherName,
+                        'motherName': s.motherName,
+                        'contactNumber': s.contactNumber,
+                        'bloodGroup': s.bloodGroup,
+                        'address': s.address,
+                        'photoUrl': s.photoUrl,
+                      },
+                    )
+                    .toList();
 
           return Column(
             children: [
@@ -192,7 +326,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                             ),
                             const SizedBox(width: 12),
                             Text(
-                              '${studentProvider.students.length} Students Enrolled',
+                              '${students.length} Students Enrolled',
                               style: const TextStyle(
                                 color: Color(0xFF001F3F),
                                 fontSize: 16,
@@ -208,44 +342,94 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
               ),
 
               // Students Section Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                child: Row(
-                  children: [
-                    const Text(
-                      'Students',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF001F3F),
-                      ),
-                    ),
-                    const Spacer(),
-                    if (studentProvider.students.isNotEmpty)
-                      ElevatedButton.icon(
-                        onPressed: () => _exportStudentData(context),
-                        icon: const Icon(Icons.download_rounded, size: 18),
-                        label: const Text('Export'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF001F3F),
-                          foregroundColor: Colors.white,
-                          elevation: 2,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+              Consumer<SchoolProvider>(
+                builder: (context, School, child) => Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: Row(
+                    children: [
+                      const Text(
+                        'Students',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF001F3F),
                         ),
                       ),
-                  ],
+                      const Spacer(),
+                      if (students.isNotEmpty) ...[
+                        ElevatedButton.icon(
+                          onPressed: _isGeneratingCards
+                              ? null
+                              : () {
+                                  final school = School.selectedSchool;
+                                  _downloadAllIDCards(
+                                    context,
+                                    students,
+                                    classModel,
+                                    '${school!.frontIdCardUrl}',
+                                  );
+                                },
+                          icon: _isGeneratingCards
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : const Icon(Icons.download_rounded, size: 18),
+                          label: Text(
+                            _isGeneratingCards
+                                ? 'Generating...'
+                                : 'Download All ID Cards',
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF001F3F),
+                            foregroundColor: Colors.white,
+                            elevation: 2,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          onPressed: () => _exportStudentData(context),
+                          icon: const Icon(Icons.table_chart_rounded, size: 18),
+                          label: const Text('Export Data'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF001F3F),
+                            elevation: 2,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: const BorderSide(
+                                color: Color(0xFF001F3F),
+                                width: 1.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
 
               // Students List
               Expanded(
-                child: studentProvider.students.isEmpty
+                child: students.isEmpty
                     ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -268,9 +452,9 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                       )
                     : ListView.builder(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                        itemCount: studentProvider.students.length,
+                        itemCount: students.length,
                         itemBuilder: (context, index) {
-                          final student = studentProvider.students[index];
+                          final student = students[index];
                           return Container(
                             margin: const EdgeInsets.only(bottom: 12),
                             decoration: BoxDecoration(
@@ -302,12 +486,12 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                                   backgroundColor: const Color(
                                     0xFF001F3F,
                                   ).withOpacity(0.1),
-                                  backgroundImage: student.photoUrl != null
-                                      ? NetworkImage(student.photoUrl!)
+                                  backgroundImage: student['photoUrl'] != null
+                                      ? NetworkImage(student['photoUrl']!)
                                       : null,
-                                  child: student.photoUrl == null
+                                  child: student['photoUrl'] == null
                                       ? Text(
-                                          student.name[0].toUpperCase(),
+                                          student['name'][0].toUpperCase(),
                                           style: const TextStyle(
                                             color: Color(0xFF001F3F),
                                             fontWeight: FontWeight.bold,
@@ -318,7 +502,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                                 ),
                               ),
                               title: Text(
-                                student.name,
+                                student['name'],
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
@@ -339,7 +523,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
-                                          'Roll: ${student.rollNumber}',
+                                          'Roll: ${student['rollNumber']}',
                                           style: const TextStyle(fontSize: 13),
                                         ),
                                       ],
@@ -354,7 +538,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
-                                          student.contactNumber,
+                                          student['contactNumber'],
                                           style: const TextStyle(fontSize: 13),
                                         ),
                                       ],
@@ -370,53 +554,85 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                                   ).withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: PopupMenuButton(
-                                  icon: const Icon(
-                                    Icons.more_vert_rounded,
-                                    color: Color(0xFF001F3F),
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  itemBuilder: (context) => [
-                                    const PopupMenuItem(
-                                      value: 'view',
-                                      child: Row(
-                                        children: [
-                                          Icon(
-                                            Icons.visibility_outlined,
-                                            size: 20,
+                                child: Consumer<SchoolProvider>(
+                                  builder: (context, School, child) =>
+                                      PopupMenuButton(
+                                        icon: const Icon(
+                                          Icons.more_vert_rounded,
+                                          color: Color(0xFF001F3F),
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
                                           ),
-                                          SizedBox(width: 12),
-                                          Text('View Details'),
+                                        ),
+                                        itemBuilder: (context) => [
+                                          const PopupMenuItem(
+                                            value: 'view',
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.visibility_outlined,
+                                                  size: 20,
+                                                ),
+                                                SizedBox(width: 12),
+                                                Text('View Details'),
+                                              ],
+                                            ),
+                                          ),
+                                          const PopupMenuItem(
+                                            value: 'idcard',
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.badge_outlined,
+                                                  size: 20,
+                                                ),
+                                                SizedBox(width: 12),
+                                                Text('Download ID Card'),
+                                              ],
+                                            ),
+                                          ),
+                                          const PopupMenuItem(
+                                            value: 'delete',
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.delete_outline,
+                                                  size: 20,
+                                                  color: Colors.red,
+                                                ),
+                                                SizedBox(width: 12),
+                                                Text(
+                                                  'Delete',
+                                                  style: TextStyle(
+                                                    color: Colors.red,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
                                         ],
+                                        onSelected: (value) async {
+                                          if (value == 'view') {
+                                            _showStudentDetails(
+                                              context,
+                                              student,
+                                            );
+                                          } else if (value == 'idcard') {
+                                            final school =
+                                                School.selectedSchool;
+                                            await _downloadSingleIDCard(
+                                              context,
+                                              student,
+                                              classModel,
+                                              '${school!.frontIdCardUrl}',
+                                            );
+                                          } else if (value == 'delete') {
+                                            _confirmDelete(context, student);
+                                          }
+                                        },
                                       ),
-                                    ),
-                                    const PopupMenuItem(
-                                      value: 'delete',
-                                      child: Row(
-                                        children: [
-                                          Icon(
-                                            Icons.delete_outline,
-                                            size: 20,
-                                            color: Colors.red,
-                                          ),
-                                          SizedBox(width: 12),
-                                          Text(
-                                            'Delete',
-                                            style: TextStyle(color: Colors.red),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                  onSelected: (value) {
-                                    if (value == 'view') {
-                                      _showStudentDetails(context, student);
-                                    } else if (value == 'delete') {
-                                      _confirmDelete(context, student);
-                                    }
-                                  },
                                 ),
                               ),
                             ),
@@ -431,7 +647,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     );
   }
 
-  void _showStudentDetails(BuildContext context, student) {
+  void _showStudentDetails(BuildContext context, dynamic student) {
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -457,7 +673,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                 ),
                 child: Column(
                   children: [
-                    if (student.photoUrl != null)
+                    if (student['photoUrl'] != null)
                       Container(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
@@ -466,7 +682,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(75),
                           child: Image.network(
-                            student.photoUrl!,
+                            student['photoUrl']!,
                             width: 120,
                             height: 120,
                             fit: BoxFit.cover,
@@ -484,7 +700,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                         ),
                         child: Center(
                           child: Text(
-                            student.name[0].toUpperCase(),
+                            student['name'][0].toUpperCase(),
                             style: const TextStyle(
                               fontSize: 48,
                               fontWeight: FontWeight.bold,
@@ -495,7 +711,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                       ),
                     const SizedBox(height: 16),
                     Text(
-                      student.name,
+                      student['name'],
                       style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -512,13 +728,13 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildDetailRow('Roll Number', student.rollNumber),
-                    _buildDetailRow("Father's Name", student.fatherName),
-                    _buildDetailRow("Mother's Name", student.motherName),
-                    _buildDetailRow('Contact', student.contactNumber),
-                    if (student.bloodGroup != null)
-                      _buildDetailRow('Blood Group', student.bloodGroup!),
-                    _buildDetailRow('Address', student.address),
+                    _buildDetailRow('Roll Number', student['rollNumber']),
+                    _buildDetailRow("Father's Name", student['fatherName']),
+                    _buildDetailRow("Mother's Name", student['motherName']),
+                    _buildDetailRow('Contact', student['contactNumber']),
+                    if (student['bloodGroup'] != null)
+                      _buildDetailRow('Blood Group', student['bloodGroup']!),
+                    _buildDetailRow('Address', student['address']),
                   ],
                 ),
               ),
@@ -589,7 +805,456 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     );
   }
 
-  void _confirmDelete(BuildContext context, student) {
+  Future<void> _downloadSingleIDCard(
+    BuildContext context,
+    dynamic student,
+    dynamic classModel,
+    String backgroundUrl,
+  ) async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final imageBytes = await _generateIDCardImage(
+        student,
+        classModel,
+        backgroundUrl!, // ✅ ASSET
+      );
+
+      if (context.mounted) Navigator.pop(context);
+
+      final safeName = student['name']
+          .replaceAll(RegExp(r'[^\w\s-]'), '')
+          .replaceAll(' ', '_');
+
+      final blob = html.Blob([imageBytes], 'image/png');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+
+      html.AnchorElement(href: url)
+        ..download = '${safeName}_ID_Card.png'
+        ..click();
+
+      html.Url.revokeObjectUrl(url);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: const [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 12),
+                Text('ID card downloaded successfully'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white),
+                const SizedBox(width: 12),
+                Text('Error: $e'),
+              ],
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _downloadAllIDCards(
+    BuildContext context,
+    List<Map<String, dynamic>> students,
+    dynamic classModel,
+    String backgroundUrl,
+  ) async {
+    setState(() {
+      _isGeneratingCards = true;
+    });
+
+    try {
+      // Create archive
+      final archive = Archive();
+
+      // Generate ID card for each student
+      for (var student in students) {
+        final imageBytes = await _generateIDCardImage(
+          student,
+          classModel,
+          backgroundUrl,
+        );
+        final safeName = student['name']
+            .replaceAll(RegExp(r'[^\w\s-]'), '')
+            .replaceAll(' ', '_');
+        final fileName = '${safeName}_ID_Card.png';
+        archive.addFile(ArchiveFile(fileName, imageBytes.length, imageBytes));
+      }
+
+      // Encode archive as ZIP
+      final zipBytes = ZipEncoder().encode(archive);
+
+      if (zipBytes != null) {
+        // Download ZIP file on web
+        final blob = html.Blob([zipBytes], 'application/zip');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+
+        final zipFileName =
+            '${classModel.className.replaceAll(' ', '_')}_ID_Cards.zip';
+
+        final anchor = html.AnchorElement(href: url)
+          ..setAttribute('download', zipFileName)
+          ..click();
+
+        html.Url.revokeObjectUrl(url);
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white),
+                  const SizedBox(width: 12),
+                  Text('${students.length} ID cards downloaded as ZIP'),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white),
+                const SizedBox(width: 12),
+                Text('Error: $e'),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    } finally {
+      setState(() {
+        _isGeneratingCards = false;
+      });
+    }
+  }
+
+  /// Generates a single ID card image as PNG Uint8List given a student, classModel, and background URL.
+  ///
+  /// Loads the background image (asset/network) and the student photo (Firebase).
+  /// Draws the student photo (center-crop, no stretching) and the student details.
+  /// Returns the generated ID card image as PNG Uint8List.
+  ///
+  /// Throws a [FutureError] if an error occurs during image loading or drawing.
+  ///
+
+  Future<ui.Image?> loadNetworkImageWebSafe(String url) async {
+    final completer = Completer<ui.Image>();
+
+    final img = html.ImageElement()
+      ..crossOrigin = 'anonymous'
+      ..src = url;
+
+    img.onLoad.listen((_) async {
+      final canvas = html.CanvasElement(width: img.width!, height: img.height!);
+      final ctx = canvas.context2D;
+      ctx.drawImage(img, 0, 0);
+
+      final dataUrl = canvas.toDataUrl();
+      final bytes = Uri.parse(dataUrl).data!.contentAsBytes();
+
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      completer.complete(frame.image);
+    });
+
+    img.onError.listen((_) {
+      completer.complete(null);
+    });
+
+    return completer.future;
+  }
+
+  Future<Uint8List> _generateIDCardImage(
+    dynamic student,
+    dynamic classModel,
+    String backgroundUrl,
+  ) async {
+    print(backgroundUrl);
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+
+    const double cardWidth = 350;
+    const double cardHeight = 550;
+
+    // ✅ LOAD IMAGES CORRECTLY
+    final bgImage = await loadNetworkImageWebSafe(backgroundUrl);
+
+    ui.Image? photoImage;
+    final photoUrl = student['photoUrl'];
+    if (photoUrl != null && photoUrl.toString().isNotEmpty) {
+      photoImage = await loadNetworkImageWebSafe(photoUrl);
+    }
+
+    final cardRect = Rect.fromLTWH(0, 0, cardWidth, cardHeight);
+    canvas.clipRRect(
+      RRect.fromRectAndRadius(cardRect, const Radius.circular(20)),
+    );
+
+    // BACKGROUND
+    if (bgImage != null) {
+      canvas.drawImageRect(
+        bgImage,
+        Rect.fromLTWH(
+          0,
+          0,
+          bgImage.width.toDouble(),
+          bgImage.height.toDouble(),
+        ),
+        cardRect,
+        Paint()..filterQuality = ui.FilterQuality.high,
+      );
+    } else {
+      canvas.drawRect(cardRect, Paint()..color = const Color(0xFFEFEFEF));
+    }
+
+    // TEXT HELPER
+    void drawText(
+      String text,
+      double x, // NEW: horizontal position
+      double y, // vertical position (TOP of text)
+      double size,
+      FontWeight weight,
+      Color color, {
+      TextAlign align = TextAlign.center, // NEW
+    }) {
+      final painter = TextPainter(
+        text: TextSpan(
+          text: text,
+          style: GoogleFonts.poppins(
+            fontSize: size,
+            fontWeight: weight,
+            color: color,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+        textAlign: align,
+      )..layout(maxWidth: cardWidth - 20);
+
+      double drawX = x;
+
+      // Adjust X based on alignment
+      if (align == TextAlign.center) {
+        drawX = x - painter.width / 2;
+      } else if (align == TextAlign.right) {
+        drawX = x - painter.width;
+      }
+
+      painter.paint(canvas, Offset(drawX, y));
+    }
+
+    void drawBalancedText(
+      String text,
+      double x,
+      double y,
+      double size,
+      FontWeight weight,
+      Color color, {
+      double lineGap = 3,
+    }) {
+      List<String> splitTextIntoLines(
+        String text, {
+        int maxCharsPerLine = 15,
+        int maxLines = 3,
+      }) {
+        List<String> words = text.split(' ');
+        List<String> lines = [];
+        String currentLine = '';
+
+        for (final word in words) {
+          if ((currentLine + ' ' + word).trim().length <= maxCharsPerLine) {
+            currentLine = (currentLine + ' ' + word).trim();
+          } else {
+            lines.add(currentLine);
+            currentLine = word;
+          }
+
+          if (lines.length == maxLines - 1) break;
+        }
+
+        if (currentLine.isNotEmpty) {
+          lines.add(currentLine);
+        }
+
+        return lines.take(maxLines).toList();
+      }
+
+      final lines = splitTextIntoLines(text, maxCharsPerLine: 15, maxLines: 3);
+
+      for (int i = 0; i < lines.length; i++) {
+        final painter = TextPainter(
+          text: TextSpan(
+            text: lines[i],
+            style: GoogleFonts.poppins(
+              fontSize: size,
+              fontWeight: weight,
+              color: color,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+          textAlign: TextAlign.left,
+          maxLines: 1,
+        )..layout();
+
+        painter.paint(canvas, Offset(x, y + i * (painter.height + lineGap)));
+      }
+    }
+
+    // PHOTO RECT
+    const double photoWidth = 140;
+    const double photoHeight = 180;
+    const double radius = 10;
+
+    final photoRect = Rect.fromCenter(
+      center: const Offset(cardWidth / 1.77, 238),
+      width: photoWidth,
+      height: photoHeight,
+    );
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        photoRect.inflate(4),
+        const Radius.circular(radius + 4),
+      ),
+      Paint()..color = const ui.Color.fromARGB(0, 255, 255, 255),
+    );
+
+    canvas.save();
+    canvas.clipRRect(
+      RRect.fromRectAndRadius(photoRect, const Radius.circular(radius)),
+    );
+
+    if (photoImage != null) {
+      canvas.drawImageRect(
+        photoImage,
+        Rect.fromLTWH(
+          0,
+          0,
+          photoImage.width.toDouble(),
+          photoImage.height.toDouble(),
+        ),
+        photoRect,
+        Paint()..filterQuality = ui.FilterQuality.high,
+      );
+    } else {
+      canvas.drawRect(
+        photoRect,
+        Paint()..color = const ui.Color.fromARGB(0, 0, 0, 0).withOpacity(0.1),
+      );
+    }
+
+    canvas.restore();
+
+    // DETAILS
+    double y = 340;
+    drawText(
+      student['name'] ?? '?'.toString().toUpperCase(),
+      cardWidth / 1.75,
+      328,
+      25,
+      FontWeight.w800,
+      Colors.red,
+    );
+    drawText(
+      'STD: ${(student['batch'] ?? '?').toString().toUpperCase()}',
+      cardWidth / 1.75,
+      354,
+      18,
+      FontWeight.w800,
+      Colors.black,
+    );
+
+    drawText(
+      'Ad.No: ${student['admissionNumber'] ?? '?'.toString().toUpperCase()}     Dob: ${student['dob'] ?? '?'.toString().toUpperCase()}',
+      cardWidth / 1.75,
+      390,
+      15,
+      FontWeight.w700,
+      Colors.blue,
+    );
+
+    drawBalancedText(
+      '${student['address'] ?? '?'.toString().toUpperCase()}',
+      cardWidth / 5,
+      420,
+      16,
+      FontWeight.w600,
+      Colors.black,
+    );
+
+    drawText(
+      'Ph:${student['contactNumber'] ?? '?'.toString().toUpperCase()},${student['phoneNumber'] ?? '?'.toString().toUpperCase()}',
+      cardWidth / 2,
+      510,
+      16,
+      FontWeight.w700,
+      Colors.red,
+    );
+    y += 42;
+
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(cardWidth.toInt(), cardHeight.toInt());
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+
+    return byteData!.buffer.asUint8List();
+  }
+
+  void _confirmDelete(BuildContext context, dynamic student) {
+    // Only allow delete for non-demo students
+    if (student['id'].toString().startsWith('demo')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.white),
+              SizedBox(width: 12),
+              Text('Cannot delete demo students'),
+            ],
+          ),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -609,7 +1274,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
           ],
         ),
         content: Text(
-          'Are you sure you want to delete ${student.name}? This action cannot be undone.',
+          'Are you sure you want to delete ${student['name']}? This action cannot be undone.',
           style: const TextStyle(fontSize: 15),
         ),
         actions: [
@@ -635,7 +1300,11 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
             onPressed: () async {
               final success = await context
                   .read<StudentProvider>()
-                  .deleteStudent(widget.schoolId, widget.classId, student.id);
+                  .deleteStudent(
+                    widget.schoolId,
+                    widget.classId,
+                    student['id'],
+                  );
               if (context.mounted) {
                 Navigator.pop(context);
                 if (success) {
@@ -675,7 +1344,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
           children: [
             Icon(Icons.info_outline, color: Colors.white),
             SizedBox(width: 12),
-            Text('Export feature coming soon'),
+            Text('Data export feature coming soon'),
           ],
         ),
         backgroundColor: const Color(0xFF001F3F),

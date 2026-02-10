@@ -26,7 +26,12 @@ class _ParentFormScreenState extends State<ParentFormScreen> {
   final _motherController = TextEditingController();
   final _addressController = TextEditingController();
   final _contactController = TextEditingController();
+  final _phoneNumberController = TextEditingController();
+
   final _bloodGroupController = TextEditingController();
+  final _batchController = TextEditingController();
+  final _dobController = TextEditingController();
+  final _admissionNumberController = TextEditingController();
 
   Uint8List? _photoBytes;
 
@@ -41,7 +46,11 @@ class _ParentFormScreenState extends State<ParentFormScreen> {
     _motherController.dispose();
     _addressController.dispose();
     _contactController.dispose();
+    _phoneNumberController.dispose();
     _bloodGroupController.dispose();
+    _batchController.dispose();
+    _dobController.dispose();
+    _admissionNumberController.dispose();
     super.dispose();
   }
 
@@ -113,7 +122,11 @@ class _ParentFormScreenState extends State<ParentFormScreen> {
         'motherName': _motherController.text.trim(),
         'address': _addressController.text.trim(),
         'contactNumber': _contactController.text.trim(),
+        'phoneNumber': _phoneNumberController.text.trim(),
         'bloodGroup': _bloodGroupController.text.trim(),
+        'batch': _batchController.text.trim(),
+        'admissionNumber': _admissionNumberController.text.trim(),
+        'dob': _dobController.text.trim(),
         'photoUrl': photoUrl,
         'createdAt': FieldValue.serverTimestamp(),
         'isDeleted': false,
@@ -290,11 +303,44 @@ class _ParentFormScreenState extends State<ParentFormScreen> {
                 keyboardType: TextInputType.phone,
                 validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
               ),
+              TextFormField(
+                controller: _phoneNumberController,
+                decoration: const InputDecoration(
+                  labelText: 'Phone Number',
+                  prefixIcon: Icon(Icons.phone),
+                ),
+                keyboardType: TextInputType.phone,
+                validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+              ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _bloodGroupController,
                 decoration: const InputDecoration(
                   labelText: 'Blood Group (Optional)',
+                  prefixIcon: Icon(Icons.bloodtype),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _batchController,
+                decoration: const InputDecoration(
+                  labelText: 'Batch (XI-XII)',
+                  prefixIcon: Icon(Icons.bloodtype),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _admissionNumberController,
+                decoration: const InputDecoration(
+                  labelText: 'Admission Number',
+                  prefixIcon: Icon(Icons.bloodtype),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _dobController,
+                decoration: const InputDecoration(
+                  labelText: 'Date of Birth',
                   prefixIcon: Icon(Icons.bloodtype),
                 ),
               ),

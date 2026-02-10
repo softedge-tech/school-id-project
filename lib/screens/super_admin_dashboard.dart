@@ -574,11 +574,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
       formKey: formKey,
       controllers: controllers,
       showPassword: true,
-
-      // ✅ Empty onSubmit (not used in create mode)
+      showIdCardImages: true,
       onSubmit: () {},
-
-      // ✅ The actual submit handler with image bytes
       onSubmitWithImages: (frontBytes, backBytes) async {
         if (formKey.currentState!.validate()) {
           final provider = parentContext.read<SchoolProvider>();
@@ -593,8 +590,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
             location: controllers['location']!.text.trim(),
             idCardPrefix: controllers['prefix']!.text.trim(),
             password: controllers['password']!.text,
-            idCardFrontBytes: frontBytes, // ✅ Now receives bytes from dialog
-            idCardBackBytes: backBytes, // ✅ Now receives bytes from dialog
+            idCardFrontBytes: frontBytes,
+            idCardBackBytes: backBytes,
           );
 
           print('Create success: $success');
@@ -634,21 +631,45 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
       formKey: formKey,
       controllers: controllers,
       showPassword: false,
-
-      // ✅ Add this for edit mode
-      onSubmit: () async {
+      showIdCardImages: true,
+      existingFrontImageUrl: school.frontIdCardUrl,
+      existingBackImageUrl: school.backIdCardUrl,
+      onSubmit: () {},
+      onSubmitWithImages: (frontBytes, backBytes) async {
         if (formKey.currentState!.validate()) {
-          // TODO: Implement update logic
+          final provider = context.read<SchoolProvider>();
+
+          print('Updating school...');
+          print('Front bytes: ${frontBytes?.length}');
+          print('Back bytes: ${backBytes?.length}');
+
+          final success = await provider.updateSchool(
+            schoolId: school.id,
+            name: controllers['name']!.text.trim(),
+            contactNumber: controllers['contact']!.text.trim(),
+            location: controllers['location']!.text.trim(),
+            idCardPrefix: controllers['prefix']!.text.trim(),
+            idCardFrontBytes: frontBytes,
+            idCardBackBytes: backBytes,
+          );
+
+          print('Update success: $success');
+
           if (context.mounted) {
             Navigator.pop(context);
-            _showSnackbar(context, 'School updated successfully', Colors.green);
-            await context.read<SchoolProvider>().loadSchools();
+            if (success) {
+              _showSnackbar(
+                context,
+                'School updated successfully',
+                Colors.green,
+              );
+              await provider.loadSchools();
+            } else if (provider.error != null) {
+              _showSnackbar(context, provider.error!, Colors.red);
+            }
           }
         }
       },
-
-      // ✅ Add empty callback (required parameter)
-      onSubmitWithImages: (frontBytes, backBytes) {},
     );
   }
 
@@ -725,11 +746,13 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     required GlobalKey<FormState> formKey,
     required Map<String, TextEditingController> controllers,
     required bool showPassword,
+    required bool showIdCardImages,
+    String? existingFrontImageUrl,
+    String? existingBackImageUrl,
     required VoidCallback onSubmit,
     required Function(Uint8List? frontBytes, Uint8List? backBytes)
     onSubmitWithImages,
   }) {
-    // ✅ DECLARE VARIABLES HERE (outside StatefulBuilder)
     Uint8List? idCardFrontBytes;
     Uint8List? idCardBackBytes;
 
@@ -828,21 +851,58 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                                   context,
                                   obscure: true,
                                 ),
+                              ],
 
+                              if (showIdCardImages) ...[
                                 const SizedBox(height: 24),
-                                const Text(
-                                  'ID Card Theme Images',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                Row(
+                                  children: [
+                                    const Text(
+                                      'ID Card Theme Images',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    if (!showPassword)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.orange.shade100,
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          'Optional',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.orange.shade800,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
                                 ),
+                                const SizedBox(height: 4),
+                                if (!showPassword)
+                                  Text(
+                                    'Upload new images to replace existing ones, or leave blank to keep current images',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
                                 const SizedBox(height: 12),
 
-                                // ✅ FRONT IMAGE
                                 _buildImagePicker(
                                   label: 'ID Card Front',
                                   imageBytes: idCardFrontBytes,
+                                  existingImageUrl: existingFrontImageUrl,
                                   context: context,
                                   onPick: () async {
                                     final picker = ImagePicker();
@@ -857,14 +917,21 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                                       });
                                     }
                                   },
+                                  onRemove: existingFrontImageUrl != null
+                                      ? () {
+                                          dialogSetState(() {
+                                            idCardFrontBytes = null;
+                                          });
+                                        }
+                                      : null,
                                 ),
 
                                 const SizedBox(height: 16),
 
-                                // ✅ BACK IMAGE
                                 _buildImagePicker(
                                   label: 'ID Card Back',
                                   imageBytes: idCardBackBytes,
+                                  existingImageUrl: existingBackImageUrl,
                                   context: context,
                                   onPick: () async {
                                     final picker = ImagePicker();
@@ -879,6 +946,13 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                                       });
                                     }
                                   },
+                                  onRemove: existingBackImageUrl != null
+                                      ? () {
+                                          dialogSetState(() {
+                                            idCardBackBytes = null;
+                                          });
+                                        }
+                                      : null,
                                 ),
                               ],
                             ],
@@ -887,7 +961,6 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                       ),
                     ),
 
-                    // FOOTER
                     // FOOTER
                     Container(
                       padding: const EdgeInsets.all(24),
@@ -911,14 +984,12 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                                           () => isSubmitting = true,
                                         );
 
-                                        if (showPassword) {
-                                          // Create mode
+                                        if (showIdCardImages) {
                                           await onSubmitWithImages(
                                             idCardFrontBytes,
                                             idCardBackBytes,
                                           );
                                         } else {
-                                          // Edit mode
                                           onSubmit();
                                         }
 
@@ -957,13 +1028,15 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
 
   Widget _buildImagePicker({
     required String label,
-    required Uint8List? imageBytes, // ✅ NEW
-
+    required Uint8List? imageBytes,
+    String? existingImageUrl,
     required VoidCallback onPick,
+    VoidCallback? onRemove,
     required BuildContext context,
   }) {
     final theme = Theme.of(context);
-    print('Preview bytes length: ${imageBytes?.length}');
+    final hasNewImage = imageBytes != null;
+    final hasExistingImage = existingImageUrl != null && !hasNewImage;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -985,23 +1058,124 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
             decoration: BoxDecoration(
               color: Colors.grey.shade50,
               border: Border.all(
-                color: imageBytes != null
+                color: (hasNewImage || hasExistingImage)
                     ? theme.primaryColor
                     : Colors.grey.shade300,
                 width: 2,
               ),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: imageBytes != null
+            child: hasNewImage
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(10),
                     child: Stack(
                       children: [
                         Center(
-                          // ✅ Add Center widget
-                          child: Image.memory(
-                            imageBytes,
-                            // fit: BoxFit.fitHeight,
+                          child: Image.memory(imageBytes, fit: BoxFit.contain),
+                        ),
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.6),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                  Icons.edit,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                              if (onRemove != null) ...[
+                                const SizedBox(width: 8),
+                                InkWell(
+                                  onTap: onRemove,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.withOpacity(0.8),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(
+                                      Icons.close,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 8,
+                          left: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.9),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'NEW',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : hasExistingImage
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Stack(
+                      children: [
+                        Center(
+                          child: Image.network(
+                            existingImageUrl,
+                            fit: BoxFit.contain,
+                            loadingBuilder: (context, child, progress) {
+                              if (progress == null) return child;
+                              return Center(
+                                child: CircularProgressIndicator(
+                                  value: progress.expectedTotalBytes != null
+                                      ? progress.cumulativeBytesLoaded /
+                                            progress.expectedTotalBytes!
+                                      : null,
+                                ),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              return Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.error_outline,
+                                    size: 48,
+                                    color: Colors.red.shade400,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Failed to load image',
+                                    style: TextStyle(
+                                      color: Colors.grey.shade600,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                         ),
                         Positioned(
@@ -1017,6 +1191,28 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                               Icons.edit,
                               color: Colors.white,
                               size: 20,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 8,
+                          left: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withOpacity(0.9),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'CURRENT',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ),

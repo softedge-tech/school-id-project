@@ -91,8 +91,8 @@ class School {
       location: map['location'] ?? '',
       schoolLoginId: map['schoolLoginId'] ?? '',
       idCardPrefix: map['idCardPrefix'] ?? '',
-      frontIdCardUrl: map['frontIdCardUrl'], // ✅
-      backIdCardUrl: map['backIdCardUrl'], // ✅
+      frontIdCardUrl: map['idCardFrontUrl'], // ✅
+      backIdCardUrl: map['idCardBackUrl'], // ✅
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       isActive: map['isActive'] ?? true,
     );

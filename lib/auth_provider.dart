@@ -120,8 +120,8 @@ class SchoolProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-   // UPLOAD IMAGE (Uint8List)
- 
+  // UPLOAD IMAGE (Uint8List)
+
   Future<String> _uploadImageBytes({
     required Uint8List bytes,
     required String path,
@@ -137,129 +137,169 @@ class SchoolProvider extends ChangeNotifier {
   }
 
   Future<bool> createSchool({
-  required String name,
-  required String contactNumber,
-  required String location,
-  required String idCardPrefix,
-  required String password,
-  Uint8List? idCardFrontBytes,
-  Uint8List? idCardBackBytes,
-}) async {
-  try {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-    
-    String? frontImageUrl;
-    String? backImageUrl;
+    required String name,
+    required String contactNumber,
+    required String location,
+    required String idCardPrefix,
+    required String password,
+    Uint8List? idCardFrontBytes,
+    Uint8List? idCardBackBytes,
+  }) async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
 
-    // Upload front image
-    if (idCardFrontBytes != null) {
-      print('Uploading front image...');
-      frontImageUrl = await _uploadImageBytes(
-        bytes: idCardFrontBytes,
-        path: 'schools/$idCardPrefix/id_card_front.jpg',
-      );
-      print('Front image uploaded: $frontImageUrl');
-    }
+      String? frontImageUrl;
+      String? backImageUrl;
 
-    // Upload back image
-    if (idCardBackBytes != null) {
-      print('Uploading back image...');
-      backImageUrl = await _uploadImageBytes(
-        bytes: idCardBackBytes,
-        path: 'schools/$idCardPrefix/id_card_back.jpg',
-      );
-      print('Back image uploaded: $backImageUrl');
-    }
+      // Upload front image
+      if (idCardFrontBytes != null) {
+        print('Uploading front image...');
+        frontImageUrl = await _uploadImageBytes(
+          bytes: idCardFrontBytes,
+          path: 'schools/$idCardPrefix/id_card_front.jpg',
+        );
+        print('Front image uploaded: $frontImageUrl');
+      }
 
-    print('Creating school in Firestore...');
-    final school = await _firebaseService.createSchool(
-      name: name,
-      contactNumber: contactNumber,
-      location: location,
-      idCardPrefix: idCardPrefix,
-      password: password,
-      frontIdCardUrl: frontImageUrl,  // ✅ Pass URLs to Firestore
-      backIdCardUrl: backImageUrl,     // ✅ Pass URLs to Firestore
-    );
+      // Upload back image
+      if (idCardBackBytes != null) {
+        print('Uploading back image...');
+        backImageUrl = await _uploadImageBytes(
+          bytes: idCardBackBytes,
+          path: 'schools/$idCardPrefix/id_card_back.jpg',
+        );
+        print('Back image uploaded: $backImageUrl');
+      }
 
-    _schools.insert(0, school);
-    print('School created successfully!');
-    return true;
-  } catch (e) {
-    print('❌ ERROR creating school: $e');  // ✅ See the actual error
-    _error = e.toString();
-    return false;
-  } finally {
-    _isLoading = false;
-    notifyListeners();
-  }
-}
-
-Future<bool> updateSchool({
-  required String id,
-  required String name,
-  required String contactNumber,
-  required String location,
-  required String idCardPrefix,
-}) async {
-  try {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-
-    // Firestore update
-    await _firebaseService.updateSchool(id, {
-      'name': name,
-      'contactNumber': contactNumber,
-      'location': location,
-      'idCardPrefix': idCardPrefix,
-    });
-
-    // ✅ Update local list (NO reload)
-    final index = _schools.indexWhere((s) => s.id == id);
-    if (index != -1) {
-      _schools[index] = _schools[index].copyWith(
+      print('Creating school in Firestore...');
+      final school = await _firebaseService.createSchool(
         name: name,
         contactNumber: contactNumber,
         location: location,
         idCardPrefix: idCardPrefix,
+        password: password,
+        frontIdCardUrl: frontImageUrl, // ✅ Pass URLs to Firestore
+        backIdCardUrl: backImageUrl, // ✅ Pass URLs to Firestore
       );
+
+      _schools.insert(0, school);
+      print('School created successfully!');
+      return true;
+    } catch (e) {
+      print('❌ ERROR creating school: $e'); // ✅ See the actual error
+      _error = e.toString();
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-
-    return true;
-  } catch (e) {
-    _error = e.toString();
-    return false;
-  } finally {
-    _isLoading = false;
-    notifyListeners();
   }
-}
 
+  Future<bool> updateSchool({
+    required String schoolId,
+    required String name,
+    required String contactNumber,
+    required String location,
+    required String idCardPrefix,
+    Uint8List? idCardFrontBytes, // ✅ NEW: Optional image bytes
+    Uint8List? idCardBackBytes, // ✅ NEW: Optional image bytes
+  }) async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      String? frontImageUrl;
+      String? backImageUrl;
+
+      // ✅ Upload new images if provided
+      if (idCardFrontBytes != null) {
+        print('Uploading new front image...');
+        frontImageUrl = await _uploadImageBytes(
+          bytes: idCardFrontBytes,
+          path: 'schools/$idCardPrefix/id_card_front.jpg',
+        );
+        print('Front image uploaded: $frontImageUrl');
+      }
+
+      if (idCardBackBytes != null) {
+        print('Uploading new back image...');
+        backImageUrl = await _uploadImageBytes(
+          bytes: idCardBackBytes,
+          path: 'schools/$idCardPrefix/id_card_front.jpg',
+        );
+        print('Front image uploaded: $frontImageUrl');
+      }
+
+      // ✅ Prepare update data
+      final Map<String, dynamic> updateData = {
+        'name': name,
+        'contactNumber': contactNumber,
+        'location': location,
+        'idCardPrefix': idCardPrefix,
+      };
+
+      // ✅ Only update image URLs if new images were uploaded
+      if (frontImageUrl != null) {
+        updateData['idCardFrontUrl'] = frontImageUrl;
+      }
+      if (backImageUrl != null) {
+        updateData['idCardBackUrl'] = backImageUrl;
+      }
+
+      print('Updating Firestore with data: $updateData');
+
+      // ✅ Firestore update
+      await _firebaseService.updateSchool(schoolId, updateData);
+
+      // ✅ Update local list (NO reload)
+      final index = _schools.indexWhere((s) => s.id == schoolId);
+      if (index != -1) {
+        _schools[index] = _schools[index].copyWith(
+          name: name,
+          contactNumber: contactNumber,
+          location: location,
+          idCardPrefix: idCardPrefix,
+          frontIdCardUrl: frontImageUrl ?? _schools[index].frontIdCardUrl,
+          backIdCardUrl: backImageUrl ?? _schools[index].backIdCardUrl,
+        );
+        print('Local school updated at index $index');
+      }
+
+      return true;
+    } catch (e) {
+      print('Error updating school: $e');
+      _error = e.toString();
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 
   Future<bool> deleteSchool(String id) async {
-  try {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
 
-    // 🔥 Delete from Firestore
-    await _firebaseService.deleteSchool(id);
+      // 🔥 Delete from Firestore
+      await _firebaseService.deleteSchool(id);
 
-    // 🔥 Update local list (instant UI update)
-    _schools.removeWhere((s) => s.id == id);
+      // 🔥 Update local list (instant UI update)
+      _schools.removeWhere((s) => s.id == id);
 
-    return true;
-  } catch (e) {
-    _error = e.toString();
-    return false;
-  } finally {
-    _isLoading = false;
-    notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
-}
 
   void clearError() {
     _error = null;
@@ -282,7 +322,7 @@ class ClassProvider extends ChangeNotifier {
 
   Future<void> loadClasses(String schoolId) async {
     print('🔍 ClassProvider.loadClasses called for schoolId: $schoolId');
-    
+
     try {
       _isLoading = true;
       _error = null;
@@ -290,7 +330,7 @@ class ClassProvider extends ChangeNotifier {
 
       print('  ⏳ Loading classes from Firebase...');
       _classes = await _firebaseService.getClassesBySchool(schoolId);
-      
+
       print('  ✅ Loaded ${_classes.length} classes:');
       for (var c in _classes) {
         print('    - ${c.className} (ID: ${c.id}, Active: ${c.isActive})');
@@ -358,20 +398,14 @@ class ClassProvider extends ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      await _firebaseService.updateClass(
-        schoolId,
-        classId,
-        {
-          'className': className,
-          'updatedAt': FieldValue.serverTimestamp(),
-        },
-      );
+      await _firebaseService.updateClass(schoolId, classId, {
+        'className': className,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
 
       final index = _classes.indexWhere((c) => c.id == classId);
       if (index != -1) {
-        _classes[index] = _classes[index].copyWith(
-          className: className,
-        );
+        _classes[index] = _classes[index].copyWith(className: className);
       }
 
       return true;
@@ -412,6 +446,7 @@ class ClassProvider extends ChangeNotifier {
     notifyListeners();
   }
 }
+
 class StudentProvider extends ChangeNotifier {
   final FirebaseService _firebaseService = FirebaseService();
 
