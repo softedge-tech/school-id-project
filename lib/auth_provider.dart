@@ -505,6 +505,9 @@ class StudentProvider extends ChangeNotifier {
       notifyListeners();
 
       await _firebaseService.addStudent(
+        admissionNumber: student.admissionNumber,
+        batch: student.batch,
+        phoneNumber: student.phoneNumber,
         schoolId: student.schoolId,
         classId: student.classId,
         name: student.name,

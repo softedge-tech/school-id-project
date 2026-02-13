@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum UserRole { superAdmin, schoolAdmin, teacher }
@@ -91,7 +93,7 @@ class School {
       location: map['location'] ?? '',
       schoolLoginId: map['schoolLoginId'] ?? '',
       idCardPrefix: map['idCardPrefix'] ?? '',
-      frontIdCardUrl: map['idCardFrontUrl'], // ✅
+      frontIdCardUrl: map['frontIdCardUrl'], // ✅
       backIdCardUrl: map['idCardBackUrl'], // ✅
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       isActive: map['isActive'] ?? true,
@@ -210,15 +212,18 @@ class Student {
   final String id;
   final String schoolId;
   final String classId;
+  final String batch;
   final String name;
   final String rollNumber;
   final String fatherName;
   final String motherName;
   final String address;
   final String contactNumber;
+  final String phoneNumber;
+  final String admissionNumber;
   final String? photoUrl;
   final String? bloodGroup;
-  final DateTime? dateOfBirth;
+  final String? dateOfBirth;
   final DateTime createdAt;
   final DateTime? updatedAt;
   final bool isDeleted;
@@ -239,10 +244,16 @@ class Student {
     required this.createdAt,
     this.updatedAt,
     this.isDeleted = false,
+    required this.batch,
+    required this.phoneNumber,
+    required this.admissionNumber,
   });
 
   factory Student.fromMap(Map<String, dynamic> map, String id) {
     return Student(
+      admissionNumber: map['admissionNumber'] ?? '',
+      batch: map['batch'] ?? '',
+      phoneNumber: map['phoneNumber'] ?? '',
       id: id,
       schoolId: map['schoolId'] ?? '',
       classId: map['classId'] ?? '',
@@ -254,9 +265,7 @@ class Student {
       contactNumber: map['contactNumber'] ?? '',
       photoUrl: map['photoUrl'],
       bloodGroup: map['bloodGroup'],
-      dateOfBirth: map['dateOfBirth'] != null
-          ? (map['dateOfBirth'] as Timestamp).toDate()
-          : null,
+      dateOfBirth: map['dob'],
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       updatedAt: map['updatedAt'] != null
           ? (map['updatedAt'] as Timestamp).toDate()
@@ -267,6 +276,9 @@ class Student {
 
   Map<String, dynamic> toMap() {
     return {
+      'admissionNumber': admissionNumber,
+      'batch': batch,
+      'phoneNumber': phoneNumber,
       'schoolId': schoolId,
       'classId': classId,
       'name': name,
@@ -277,9 +289,7 @@ class Student {
       'contactNumber': contactNumber,
       'photoUrl': photoUrl,
       'bloodGroup': bloodGroup,
-      'dateOfBirth': dateOfBirth != null
-          ? Timestamp.fromDate(dateOfBirth!)
-          : null,
+      'dob': dateOfBirth,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
       'isDeleted': isDeleted,
@@ -295,7 +305,7 @@ class Student {
     String? contactNumber,
     String? photoUrl,
     String? bloodGroup,
-    DateTime? dateOfBirth,
+    String? dateOfBirth,
     DateTime? updatedAt,
     bool? isDeleted,
   }) {
@@ -315,6 +325,9 @@ class Student {
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       isDeleted: isDeleted ?? this.isDeleted,
+      batch: batch,
+      phoneNumber: phoneNumber,
+      admissionNumber: admissionNumber,
     );
   }
 }

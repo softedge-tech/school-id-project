@@ -23,7 +23,7 @@ class _ParentFormScreenState extends State<ParentFormScreen> {
   final _nameController = TextEditingController();
   final _rollController = TextEditingController();
   final _fatherController = TextEditingController();
-  final _motherController = TextEditingController();
+  final _boardingController = TextEditingController();
   final _addressController = TextEditingController();
   final _contactController = TextEditingController();
   final _phoneNumberController = TextEditingController();
@@ -43,7 +43,7 @@ class _ParentFormScreenState extends State<ParentFormScreen> {
     _nameController.dispose();
     _rollController.dispose();
     _fatherController.dispose();
-    _motherController.dispose();
+    _boardingController.dispose();
     _addressController.dispose();
     _contactController.dispose();
     _phoneNumberController.dispose();
@@ -119,7 +119,7 @@ class _ParentFormScreenState extends State<ParentFormScreen> {
         'name': _nameController.text.trim(),
         'rollNumber': _rollController.text.trim(),
         'fatherName': _fatherController.text.trim(),
-        'motherName': _motherController.text.trim(),
+        'motherName': _boardingController.text.trim(),
         'address': _addressController.text.trim(),
         'contactNumber': _contactController.text.trim(),
         'phoneNumber': _phoneNumberController.text.trim(),
@@ -186,7 +186,7 @@ class _ParentFormScreenState extends State<ParentFormScreen> {
                     _nameController.clear();
                     _rollController.clear();
                     _fatherController.clear();
-                    _motherController.clear();
+                    _boardingController.clear();
                     _addressController.clear();
                     _contactController.clear();
                     _bloodGroupController.clear();
@@ -286,9 +286,9 @@ class _ParentFormScreenState extends State<ParentFormScreen> {
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _motherController,
+                controller: _boardingController,
                 decoration: const InputDecoration(
-                  labelText: "Mother's Name",
+                  labelText: "Boarding Point",
                   prefixIcon: Icon(Icons.person_outline),
                 ),
                 validator: (v) => v?.isEmpty ?? true ? 'Required' : null,

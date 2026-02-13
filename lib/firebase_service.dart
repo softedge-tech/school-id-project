@@ -62,66 +62,65 @@ class FirebaseService {
 
   // ========== SCHOOL OPERATIONS ==========
 
- Future<School> createSchool({
-  required String name,
-  required String contactNumber,
-  required String location,
-  required String idCardPrefix,
-  required String password,
-  String? frontIdCardUrl, // ✅ NEW
-  String? backIdCardUrl,  // ✅ NEW
-}) async {
-  try {
-    // Generate IDs
-    final schoolId = _firestore.collection('schools').doc().id;
-    final schoolLoginId =
-        '${idCardPrefix.toUpperCase()}_${DateTime.now().millisecondsSinceEpoch}';
+  Future<School> createSchool({
+    required String name,
+    required String contactNumber,
+    required String location,
+    required String idCardPrefix,
+    required String password,
+    String? frontIdCardUrl, // ✅ NEW
+    String? backIdCardUrl, // ✅ NEW
+  }) async {
+    try {
+      // Generate IDs
+      final schoolId = _firestore.collection('schools').doc().id;
+      final schoolLoginId =
+          '${idCardPrefix.toUpperCase()}_${DateTime.now().millisecondsSinceEpoch}';
 
-    final email = '$schoolLoginId@school.portal';
+      final email = '$schoolLoginId@school.portal';
 
-    // 🔐 Create school admin auth account
-    final userCredential = await _auth.createUserWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
+      // 🔐 Create school admin auth account
+      final userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
 
-    final school = School(
-      id: schoolId,
-      name: name,
-      contactNumber: contactNumber,
-      location: location,
-      schoolLoginId: schoolLoginId,
-      idCardPrefix: idCardPrefix,
-      frontIdCardUrl: frontIdCardUrl, // ✅
-      backIdCardUrl: backIdCardUrl,   // ✅
-      createdAt: DateTime.now(),
-    );
+      final school = School(
+        id: schoolId,
+        name: name,
+        contactNumber: contactNumber,
+        location: location,
+        schoolLoginId: schoolLoginId,
+        idCardPrefix: idCardPrefix,
+        frontIdCardUrl: frontIdCardUrl, // ✅
+        backIdCardUrl: backIdCardUrl, // ✅
+        createdAt: DateTime.now(),
+      );
 
-    // 🏫 Save school data
-    await _firestore.collection('schools').doc(schoolId).set({
-      ...school.toMap(),
-      'frontIdCardUrl': frontIdCardUrl,
-      'backIdCardUrl': backIdCardUrl,
-      'isDeleted': false,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+      // 🏫 Save school data
+      await _firestore.collection('schools').doc(schoolId).set({
+        ...school.toMap(),
+        'frontIdCardUrl': frontIdCardUrl,
+        'backIdCardUrl': backIdCardUrl,
+        'isDeleted': false,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
 
-    // 👤 Save user data
-    await _firestore.collection('users').doc(userCredential.user!.uid).set({
-      'email': email,
-      'role': 'school_admin',
-      'schoolId': schoolId,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+      // 👤 Save user data
+      await _firestore.collection('users').doc(userCredential.user!.uid).set({
+        'email': email,
+        'role': 'school_admin',
+        'schoolId': schoolId,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
 
-    return school;
-  } on FirebaseAuthException catch (e) {
-    throw _handleAuthException(e);
-  } catch (e) {
-    throw 'Failed to create school: ${e.toString()}';
+      return school;
+    } on FirebaseAuthException catch (e) {
+      throw _handleAuthException(e);
+    } catch (e) {
+      throw 'Failed to create school: ${e.toString()}';
+    }
   }
-}
-
 
   Future<void> updateSchool(String schoolId, Map<String, dynamic> data) async {
     try {
@@ -311,6 +310,9 @@ class FirebaseService {
   // ========== STUDENT OPERATIONS ==========
 
   Future<Student> addStudent({
+    required String batch,
+    required String phoneNumber,
+    required String admissionNumber,
     required String schoolId,
     required String classId,
     required String name,
@@ -320,7 +322,7 @@ class FirebaseService {
     required String address,
     required String contactNumber,
     String? bloodGroup,
-    DateTime? dateOfBirth,
+    String? dateOfBirth,
     File? photo,
   }) async {
     try {
@@ -347,6 +349,7 @@ class FirebaseService {
         id: studentId,
         schoolId: schoolId,
         classId: classId,
+
         name: name,
         rollNumber: rollNumber,
         fatherName: fatherName,
@@ -357,6 +360,9 @@ class FirebaseService {
         bloodGroup: bloodGroup,
         dateOfBirth: dateOfBirth,
         createdAt: DateTime.now(),
+        batch: batch,
+        phoneNumber: phoneNumber,
+        admissionNumber: admissionNumber,
       );
 
       await _firestore

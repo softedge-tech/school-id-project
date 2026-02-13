@@ -238,6 +238,10 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                         'bloodGroup': s.bloodGroup,
                         'address': s.address,
                         'photoUrl': s.photoUrl,
+                        'admissionNumber': s.admissionNumber,
+                        'batch': s.batch,
+                        'phoneNumber': s.phoneNumber,
+                        'dateOfBirth': s.dateOfBirth,
                       },
                     )
                     .toList();
@@ -487,11 +491,15 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                                     0xFF001F3F,
                                   ).withOpacity(0.1),
                                   backgroundImage: student['photoUrl'] != null
-                                      ? NetworkImage(student['photoUrl']!)
+                                      ? NetworkImage(
+                                          student['photoUrl']!.toString(),
+                                        )
                                       : null,
                                   child: student['photoUrl'] == null
                                       ? Text(
-                                          student['name'][0].toUpperCase(),
+                                          student['name']
+                                              .toString()[0]
+                                              .toUpperCase(),
                                           style: const TextStyle(
                                             color: Color(0xFF001F3F),
                                             fontWeight: FontWeight.bold,
@@ -502,7 +510,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                                 ),
                               ),
                               title: Text(
-                                student['name'],
+                                student['name'].toString(),
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
@@ -538,7 +546,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
-                                          student['contactNumber'],
+                                          student['contactNumber'].toString(),
                                           style: const TextStyle(fontSize: 13),
                                         ),
                                       ],
@@ -817,7 +825,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
         barrierDismissible: false,
         builder: (_) => const Center(child: CircularProgressIndicator()),
       );
-
+      print(student['admissionNumber']);
       final imageBytes = await _generateIDCardImage(
         student,
         classModel,
@@ -1004,7 +1012,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     dynamic classModel,
     String backgroundUrl,
   ) async {
-    print(backgroundUrl);
+    // print(backgroundUrl);
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
 
@@ -1077,6 +1085,40 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       painter.paint(canvas, Offset(drawX, y));
     }
 
+    List<String> splitTextIntoLines(
+      String text, {
+      int maxCharsPerLine = 12,
+      int maxLines = 3,
+    }) {
+      final words = text.trim().split(RegExp(r'\s+'));
+      final lines = <String>[];
+      String currentLine = '';
+
+      for (final word in words) {
+        final testLine = currentLine.isEmpty ? word : '$currentLine $word';
+
+        if (testLine.length <= maxCharsPerLine) {
+          currentLine = testLine;
+        } else {
+          if (currentLine.isNotEmpty) {
+            lines.add(currentLine);
+          }
+          currentLine = word;
+
+          if (lines.length == maxLines - 1) {
+            lines.add('$currentLine...');
+            return lines;
+          }
+        }
+      }
+
+      if (currentLine.isNotEmpty && lines.length < maxLines) {
+        lines.add(currentLine);
+      }
+
+      return lines;
+    }
+
     void drawBalancedText(
       String text,
       double x,
@@ -1086,34 +1128,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       Color color, {
       double lineGap = 3,
     }) {
-      List<String> splitTextIntoLines(
-        String text, {
-        int maxCharsPerLine = 15,
-        int maxLines = 3,
-      }) {
-        List<String> words = text.split(' ');
-        List<String> lines = [];
-        String currentLine = '';
-
-        for (final word in words) {
-          if ((currentLine + ' ' + word).trim().length <= maxCharsPerLine) {
-            currentLine = (currentLine + ' ' + word).trim();
-          } else {
-            lines.add(currentLine);
-            currentLine = word;
-          }
-
-          if (lines.length == maxLines - 1) break;
-        }
-
-        if (currentLine.isNotEmpty) {
-          lines.add(currentLine);
-        }
-
-        return lines.take(maxLines).toList();
-      }
-
-      final lines = splitTextIntoLines(text, maxCharsPerLine: 15, maxLines: 3);
+      final lines = splitTextIntoLines(text, maxCharsPerLine: 12, maxLines: 3);
 
       for (int i = 0; i < lines.length; i++) {
         final painter = TextPainter(
@@ -1126,9 +1141,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
             ),
           ),
           textDirection: TextDirection.ltr,
-          textAlign: TextAlign.left,
-          maxLines: 1,
-        )..layout();
+        )..layout(maxWidth: 200);
 
         painter.paint(canvas, Offset(x, y + i * (painter.height + lineGap)));
       }
@@ -1184,31 +1197,31 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     drawText(
       student['name'] ?? '?'.toString().toUpperCase(),
       cardWidth / 1.75,
-      328,
-      25,
+      329,
+      24,
       FontWeight.w800,
       Colors.red,
     );
     drawText(
       'STD: ${(student['batch'] ?? '?').toString().toUpperCase()}',
       cardWidth / 1.75,
-      354,
+      356,
       18,
-      FontWeight.w800,
+      FontWeight.w700,
       Colors.black,
     );
 
     drawText(
-      'Ad.No: ${student['admissionNumber'] ?? '?'.toString().toUpperCase()}     Dob: ${student['dob'] ?? '?'.toString().toUpperCase()}',
+      'Ad.No: ${student['admissionNumber'] ?? '?'.toString().toUpperCase()}     Dob: ${student['dateOfBirth'] ?? '?'.toString().toUpperCase()}',
       cardWidth / 1.75,
-      390,
-      15,
+      391,
+      16,
       FontWeight.w700,
       Colors.blue,
     );
-
+    final address = student['address'] ?? '?';
     drawBalancedText(
-      '${student['address'] ?? '?'.toString().toUpperCase()}',
+      address,
       cardWidth / 5,
       420,
       16,
