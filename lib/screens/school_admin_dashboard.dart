@@ -358,78 +358,80 @@ class _SchoolAdminDashboardState extends State<SchoolAdminDashboard> {
                           ),
                         ],
                       ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        leading: Container(
-                          width: 56,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF001F3F), Color(0xFF003D7A)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(14),
+                      child: SelectionArea(
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
                           ),
-                          child: Center(
-                            child: Text(
-                              classModel.className[0].toUpperCase(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
+                          leading: Container(
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF001F3F), Color(0xFF003D7A)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
+                              borderRadius: BorderRadius.circular(14),
                             ),
-                          ),
-                        ),
-                        title: Text(
-                          classModel.className,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                            color: Color(0xFF001F3F),
-                          ),
-                        ),
-                        subtitle: Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.person_outline_rounded,
-                                size: 16,
-                                color: Colors.grey[600],
-                              ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  'Teacher: ${classModel.teacherLoginId}',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.grey[600],
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
+                            child: Center(
+                              child: Text(
+                                classModel.className[0].toUpperCase(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            ],
+                            ),
                           ),
+                          title: Text(
+                            classModel.className,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                              color: Color(0xFF001F3F),
+                            ),
+                          ),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.person_outline_rounded,
+                                  size: 16,
+                                  color: Colors.grey[600],
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    'Teacher: ${classModel.teacherLoginId}',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey[600],
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          trailing: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF001F3F).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              color: Color(0xFF001F3F),
+                              size: 18,
+                            ),
+                          ),
+                          onTap: () =>
+                              context.go('/class/$_schoolId/${classModel.id}'),
                         ),
-                        trailing: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF001F3F).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            color: Color(0xFF001F3F),
-                            size: 18,
-                          ),
-                        ),
-                        onTap: () =>
-                            context.go('/class/$_schoolId/${classModel.id}'),
                       ),
                     );
                   },
@@ -456,7 +458,6 @@ class _SchoolAdminDashboardState extends State<SchoolAdminDashboard> {
           );
         },
       ),
-      
     );
   }
 

@@ -342,32 +342,34 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
   }
 
   Widget _buildSchoolsTable(SchoolProvider provider, ThemeData theme) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          _buildTableHeader(),
-          Expanded(
-            child: ListView.separated(
-              padding: EdgeInsets.zero,
-              itemCount: provider.schools.length,
-              separatorBuilder: (_, __) =>
-                  Divider(height: 1, color: Colors.grey.shade200),
-              itemBuilder: (context, index) =>
-                  _buildSchoolRow(provider.schools[index], index, theme),
+    return SelectionArea(
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
             ),
-          ),
-        ],
+          ],
+        ),
+        child: Column(
+          children: [
+            _buildTableHeader(),
+            Expanded(
+              child: ListView.separated(
+                padding: EdgeInsets.zero,
+                itemCount: provider.schools.length,
+                separatorBuilder: (_, __) =>
+                    Divider(height: 1, color: Colors.grey.shade200),
+                itemBuilder: (context, index) =>
+                    _buildSchoolRow(provider.schools[index], index, theme),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -497,7 +499,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
             Expanded(
               flex: 2,
               child: Text(
-                school.schoolLoginId,
+                '${school.schoolLoginId}@school.portal',
                 style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
