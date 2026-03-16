@@ -842,6 +842,12 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
           classModel,
           backgroundUrl!, // ✅ ASSET
         );
+      } else if (prefix == 'ID-02') {
+        imageBytes = await _generateIDCardImage2(
+          student,
+          classModel,
+          backgroundUrl!, // ✅ ASSET
+        );
       }
       if (context.mounted) Navigator.pop(context);
 
@@ -919,6 +925,12 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
           );
         } else if (prefix == 'ID-01') {
           imageBytes = await _generateIDCardImage1(
+            student,
+            classModel,
+            backgroundUrl, // ✅ ASSET
+          );
+        } else if (prefix == 'ID-02') {
+          imageBytes = await _generateIDCardImage2(
             student,
             classModel,
             backgroundUrl, // ✅ ASSET
@@ -1348,7 +1360,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
 
     List<String> splitTextIntoLines(
       String text, {
-      int maxCharsPerLine = 12,
+      int maxCharsPerLine = 20,
       int maxLines = 3,
     }) {
       final words = text.trim().split(RegExp(r'\s+'));
@@ -1387,9 +1399,9 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       double size,
       FontWeight weight,
       Color color, {
-      double lineGap = 3,
+      double lineGap = 2,
     }) {
-      final lines = splitTextIntoLines(text, maxCharsPerLine: 20, maxLines: 3);
+      final lines = splitTextIntoLines(text, maxCharsPerLine: 30, maxLines: 4);
 
       for (int i = 0; i < lines.length; i++) {
         final painter = TextPainter(
@@ -1402,7 +1414,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
             ),
           ),
           textDirection: TextDirection.ltr,
-        )..layout(maxWidth: 200);
+        )..layout(maxWidth: 300);
 
         painter.paint(canvas, Offset(x, y + i * (painter.height + lineGap)));
       }
@@ -1482,8 +1494,8 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
 
     drawText(
       'Admn No: ${student['admissionNumber'] ?? '?'.toString().toUpperCase()}',
-      cardWidth / 3.25,
-      345,
+      cardWidth / 3.75,
+      344,
       16,
       FontWeight.w500,
       Colors.black,
@@ -1491,7 +1503,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     drawText(
       'DOB: ${student['dateOfBirth'] ?? '?'.toString().toUpperCase()}',
       cardWidth / 3.5,
-      372,
+      369,
       16,
       FontWeight.w500,
       Colors.black,
@@ -1500,19 +1512,267 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     final address = student['address'] ?? '?';
     drawBalancedText(
       address,
-      cardWidth / 10,
-      400,
-      15,
+      cardWidth / 9.5,
+      393,
+      16,
       FontWeight.w500,
       Colors.black,
     );
 
     drawText(
-      'Ph:${student['contactNumber'] ?? '?'.toString().toUpperCase()}',
-      cardWidth / 3.75,
-      460,
+      'Ph:${student['contactNumber'] ?? '?'.toString().toUpperCase()} - ${student['phoneNumber'] ?? '?'.toString().toUpperCase()}',
+      cardWidth / 2.45,
+      458,
       16,
       FontWeight.w500,
+      const ui.Color.fromARGB(255, 0, 0, 0),
+    );
+    y += 42;
+
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(cardWidth.toInt(), cardHeight.toInt());
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+
+    return byteData!.buffer.asUint8List();
+  }
+
+  Future<Uint8List> _generateIDCardImage2(
+    dynamic student,
+    dynamic classModel,
+    String backgroundUrl,
+  ) async {
+    // print(backgroundUrl);
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+
+    const double cardWidth = 350;
+    const double cardHeight = 550;
+
+    // ✅ LOAD IMAGES CORRECTLY
+    final bgImage = await loadNetworkImageWebSafe(backgroundUrl);
+
+    ui.Image? photoImage;
+    final photoUrl = student['photoUrl'];
+    if (photoUrl != null && photoUrl.toString().isNotEmpty) {
+      photoImage = await loadNetworkImageWebSafe(photoUrl);
+    }
+
+    final cardRect = Rect.fromLTWH(0, 0, cardWidth, cardHeight);
+    canvas.clipRRect(
+      RRect.fromRectAndRadius(cardRect, const Radius.circular(20)),
+    );
+
+    // BACKGROUND
+    if (bgImage != null) {
+      canvas.drawImageRect(
+        bgImage,
+        Rect.fromLTWH(
+          0,
+          0,
+          bgImage.width.toDouble(),
+          bgImage.height.toDouble(),
+        ),
+        cardRect,
+        Paint()..filterQuality = ui.FilterQuality.high,
+      );
+    } else {
+      canvas.drawRect(cardRect, Paint()..color = const Color(0xFFEFEFEF));
+    }
+
+    // TEXT HELPER
+    void drawText(
+      String text,
+      double x, // NEW: horizontal position
+      double y, // vertical position (TOP of text)
+      double size,
+      FontWeight weight,
+      Color color, {
+      TextAlign align = TextAlign.center, // NEW
+    }) {
+      final painter = TextPainter(
+        text: TextSpan(
+          text: text,
+          style: GoogleFonts.poppins(
+            fontSize: size,
+            fontWeight: weight,
+            color: color,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+        textAlign: align,
+      )..layout(maxWidth: cardWidth - 20);
+
+      double drawX = x;
+
+      // Adjust X based on alignment
+      if (align == TextAlign.center) {
+        drawX = x - painter.width / 2;
+      } else if (align == TextAlign.right) {
+        drawX = x - painter.width;
+      }
+
+      painter.paint(canvas, Offset(drawX, y));
+    }
+
+    List<String> splitTextIntoLines(
+      String text, {
+      int maxCharsPerLine = 12,
+      int maxLines = 3,
+    }) {
+      final words = text.trim().split(RegExp(r'\s+'));
+      final lines = <String>[];
+      String currentLine = '';
+
+      for (final word in words) {
+        final testLine = currentLine.isEmpty ? word : '$currentLine $word';
+
+        if (testLine.length <= maxCharsPerLine) {
+          currentLine = testLine;
+        } else {
+          if (currentLine.isNotEmpty) {
+            lines.add(currentLine);
+          }
+          currentLine = word;
+
+          if (lines.length == maxLines - 1) {
+            lines.add('$currentLine...');
+            return lines;
+          }
+        }
+      }
+
+      if (currentLine.isNotEmpty && lines.length < maxLines) {
+        lines.add(currentLine);
+      }
+
+      return lines;
+    }
+
+    void drawBalancedText(
+      String text,
+      double x,
+      double y,
+      double size,
+      FontWeight weight,
+      Color color, {
+      double lineGap = 3,
+    }) {
+      final lines = splitTextIntoLines(text, maxCharsPerLine: 20, maxLines: 3);
+
+      for (int i = 0; i < lines.length; i++) {
+        final painter = TextPainter(
+          text: TextSpan(
+            text: lines[i],
+            style: GoogleFonts.poppins(
+              fontSize: size,
+              fontWeight: weight,
+              color: color,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout(maxWidth: 200);
+
+        painter.paint(canvas, Offset(x, y + i * (painter.height + lineGap)));
+      }
+    }
+
+    // PHOTO RECT
+    const double photoWidth = 156;
+    const double photoHeight = 190.5;
+    const double radius = 1;
+
+    final photoRect = Rect.fromCenter(
+      center: const Offset(cardWidth / 2, 234.5),
+      width: photoWidth,
+      height: photoHeight,
+    );
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        photoRect.inflate(4),
+        const Radius.circular(radius + 4),
+      ),
+      Paint()..color = const ui.Color.fromARGB(0, 255, 255, 255),
+    );
+
+    canvas.save();
+    canvas.clipRRect(
+      RRect.fromRectAndRadius(photoRect, const Radius.circular(radius)),
+    );
+
+    if (photoImage != null) {
+      canvas.drawImageRect(
+        photoImage,
+        Rect.fromLTWH(
+          0,
+          0,
+          photoImage.width.toDouble(),
+          photoImage.height.toDouble(),
+        ),
+        photoRect,
+        Paint()..filterQuality = ui.FilterQuality.high,
+      );
+    } else {
+      canvas.drawRect(
+        photoRect,
+        Paint()..color = const ui.Color.fromARGB(0, 0, 0, 0).withOpacity(0.1),
+      );
+    }
+
+    canvas.restore();
+
+    // DETAILS
+    double y = 340;
+    // drawText(
+    //   '${student['bloodGroup'] ?? '?'.toString().toUpperCase()}',
+    //   cardWidth / 1.11,
+    //   165.5,
+    //   18,
+    //   FontWeight.w800,
+    //   Colors.red,
+    // );
+    drawText(
+      student['name'] ?? '?'.toString().toUpperCase(),
+      cardWidth / 2,
+      340,
+      25,
+      FontWeight.w800,
+      Colors.red,
+    );
+    drawText(
+      'STD: ${(student['batch'] ?? '?').toString().toUpperCase()}',
+      cardWidth / 2,
+      370,
+      20,
+      FontWeight.w700,
+      Colors.black,
+    );
+
+    drawText(
+      'Ad.No: ${student['admissionNumber'] ?? '?'.toString().toUpperCase()}      Dob: ${student['dateOfBirth'] ?? '?'.toString().toUpperCase()}',
+      cardWidth / 2,
+      395,
+      18,
+      FontWeight.w700,
+      Colors.blue,
+    );
+
+    final address = student['address'] ?? '?';
+    drawBalancedText(
+      address,
+      cardWidth / 9.5,
+      422,
+      18,
+      FontWeight.w700,
+      Colors.black,
+    );
+
+    drawText(
+      'Ph:${student['contactNumber'] ?? '?'.toString().toUpperCase()} , ${student['phoneNumber'] ?? '?'.toString().toUpperCase()}',
+      cardWidth / 2,
+      515,
+      16,
+      FontWeight.w700,
       const ui.Color.fromARGB(255, 0, 0, 0),
     );
     y += 42;
