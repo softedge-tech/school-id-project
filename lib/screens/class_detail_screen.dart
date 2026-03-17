@@ -1326,12 +1326,12 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     // TEXT HELPER
     void drawText(
       String text,
-      double x, // NEW: horizontal position
-      double y, // vertical position (TOP of text)
+      double x,
+      double y,
       double size,
       FontWeight weight,
       Color color, {
-      TextAlign align = TextAlign.center, // NEW
+      double maxWidth = 200, // control width
     }) {
       final painter = TextPainter(
         text: TextSpan(
@@ -1343,19 +1343,11 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
           ),
         ),
         textDirection: TextDirection.ltr,
-        textAlign: align,
-      )..layout(maxWidth: cardWidth - 20);
+        textAlign: TextAlign.left, // 👈 always left
+      )..layout(maxWidth: maxWidth);
 
-      double drawX = x;
-
-      // Adjust X based on alignment
-      if (align == TextAlign.center) {
-        drawX = x - painter.width / 2;
-      } else if (align == TextAlign.right) {
-        drawX = x - painter.width;
-      }
-
-      painter.paint(canvas, Offset(drawX, y));
+      // 👇 FIXED START POSITION (NO SHIFTING)
+      painter.paint(canvas, Offset(x, y));
     }
 
     List<String> splitTextIntoLines(
@@ -1392,6 +1384,40 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       return lines;
     }
 
+    void drawTextHeading(
+      String text,
+      double x, // NEW: horizontal position
+      double y, // vertical position (TOP of text)
+      double size,
+      FontWeight weight,
+      Color color, {
+      TextAlign align = TextAlign.center, // NEW
+    }) {
+      final painter = TextPainter(
+        text: TextSpan(
+          text: text,
+          style: GoogleFonts.poppins(
+            fontSize: size,
+            fontWeight: weight,
+            color: color,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+        textAlign: align,
+      )..layout(maxWidth: cardWidth - 20);
+
+      double drawX = x;
+
+      // Adjust X based on alignment
+      if (align == TextAlign.center) {
+        drawX = x - painter.width / 2;
+      } else if (align == TextAlign.right) {
+        drawX = x - painter.width;
+      }
+
+      painter.paint(canvas, Offset(drawX, y));
+    }
+
     void drawBalancedText(
       String text,
       double x,
@@ -1401,7 +1427,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       Color color, {
       double lineGap = 2,
     }) {
-      final lines = splitTextIntoLines(text, maxCharsPerLine: 30, maxLines: 4);
+      final lines = splitTextIntoLines(text, maxCharsPerLine: 28, maxLines: 4);
 
       for (int i = 0; i < lines.length; i++) {
         final painter = TextPainter(
@@ -1467,7 +1493,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
 
     // DETAILS
     double y = 340;
-    drawText(
+    drawTextHeading(
       '${student['bloodGroup'] ?? '?'.toString().toUpperCase()}',
       cardWidth / 1.11,
       165.5,
@@ -1475,7 +1501,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       FontWeight.w800,
       Colors.red,
     );
-    drawText(
+    drawTextHeading(
       student['name'] ?? '?'.toString().toUpperCase(),
       cardWidth / 2,
       265,
@@ -1483,7 +1509,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       FontWeight.w800,
       Colors.red,
     );
-    drawText(
+    drawTextHeading(
       'Class: ${(student['batch'] ?? '?').toString().toUpperCase()}',
       cardWidth / 2,
       300,
@@ -1494,7 +1520,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
 
     drawText(
       'Admn No: ${student['admissionNumber'] ?? '?'.toString().toUpperCase()}',
-      cardWidth / 3.75,
+      30,
       344,
       16,
       FontWeight.w500,
@@ -1502,7 +1528,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     );
     drawText(
       'DOB: ${student['dateOfBirth'] ?? '?'.toString().toUpperCase()}',
-      cardWidth / 3.5,
+      30,
       369,
       16,
       FontWeight.w500,
@@ -1510,18 +1536,11 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     );
 
     final address = student['address'] ?? '?';
-    drawBalancedText(
-      address,
-      cardWidth / 9.5,
-      393,
-      16,
-      FontWeight.w500,
-      Colors.black,
-    );
+    drawBalancedText(address, 30, 393, 16, FontWeight.w500, Colors.black);
 
     drawText(
-      'Ph:${student['contactNumber'] ?? '?'.toString().toUpperCase()} - ${student['phoneNumber'] ?? '?'.toString().toUpperCase()}',
-      cardWidth / 2.45,
+      'Contact: ${student['contactNumber'] ?? '?'.toString().toUpperCase()}',
+      30,
       458,
       16,
       FontWeight.w500,
