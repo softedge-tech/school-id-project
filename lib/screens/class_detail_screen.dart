@@ -1350,38 +1350,48 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       painter.paint(canvas, Offset(x, y));
     }
 
-    List<String> splitTextIntoLines(
+    List<String> splitTextIntoLinesSmart(
       String text, {
-      int maxCharsPerLine = 20,
       int maxLines = 3,
+      int minCharsPerLine = 9,
     }) {
       final words = text.trim().split(RegExp(r'\s+'));
-      final lines = <String>[];
-      String currentLine = '';
+      final totalWords = words.length;
 
-      for (final word in words) {
-        final testLine = currentLine.isEmpty ? word : '$currentLine $word';
+      if (totalWords == 0) return [];
 
-        if (testLine.length <= maxCharsPerLine) {
-          currentLine = testLine;
-        } else {
-          if (currentLine.isNotEmpty) {
-            lines.add(currentLine);
-          }
-          currentLine = word;
+      // Decide number of lines
+      int lines = (totalWords / 3).ceil(); // prefer 3 words per line
+      lines = lines.clamp(1, maxLines);
 
-          if (lines.length == maxLines - 1) {
-            lines.add('$currentLine...');
-            return lines;
-          }
+      // Distribute words evenly
+      int wordsPerLine = (totalWords / lines).ceil();
+
+      List<List<String>> result = [];
+      int index = 0;
+
+      for (int i = 0; i < lines; i++) {
+        int remainingWords = totalWords - index;
+        int remainingLines = lines - i;
+
+        int take = (remainingWords / remainingLines).ceil();
+        take = take.clamp(2, 3); // enforce 2–3 words per line
+
+        result.add(words.sublist(index, (index + take).clamp(0, totalWords)));
+        index += take;
+
+        if (index >= totalWords) break;
+      }
+
+      // 🔥 Adjust for minimum characters
+      for (int i = 0; i < result.length - 1; i++) {
+        String current = result[i].join(' ');
+        if (current.length < minCharsPerLine && result[i + 1].isNotEmpty) {
+          result[i].add(result[i + 1].removeAt(0));
         }
       }
 
-      if (currentLine.isNotEmpty && lines.length < maxLines) {
-        lines.add(currentLine);
-      }
-
-      return lines;
+      return result.map((e) => e.join(' ')).toList();
     }
 
     void drawTextHeading(
@@ -1427,8 +1437,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       Color color, {
       double lineGap = 2,
     }) {
-      final lines = splitTextIntoLines(text, maxCharsPerLine: 28, maxLines: 4);
-
+      final lines = splitTextIntoLinesSmart(text);
       for (int i = 0; i < lines.length; i++) {
         final painter = TextPainter(
           text: TextSpan(
@@ -1507,10 +1516,10 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       265,
       24,
       FontWeight.w800,
-      Colors.red,
+      Colors.black,
     );
     drawTextHeading(
-      'Class: ${(student['batch'] ?? '?').toString().toUpperCase()}',
+      'CLASS: ${(student['batch'] ?? '?').toString().toUpperCase()}',
       cardWidth / 2,
       300,
       18,
