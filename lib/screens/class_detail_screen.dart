@@ -1336,11 +1336,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       final painter = TextPainter(
         text: TextSpan(
           text: text,
-          style: GoogleFonts.poppins(
-            fontSize: size,
-            fontWeight: weight,
-            color: color,
-          ),
+          style: TextStyle(fontSize: size, fontWeight: weight, color: color),
         ),
         textDirection: TextDirection.ltr,
         textAlign: TextAlign.left, // 👈 always left
@@ -1405,7 +1401,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     }) {
       final painter = TextPainter(
         text: TextSpan(
-          text: text,
+          text: text.toUpperCase(),
           style: GoogleFonts.poppins(
             fontSize: size,
             fontWeight: weight,
@@ -1442,11 +1438,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
         final painter = TextPainter(
           text: TextSpan(
             text: lines[i],
-            style: GoogleFonts.poppins(
-              fontSize: size,
-              fontWeight: weight,
-              color: color,
-            ),
+            style: TextStyle(fontSize: size, fontWeight: weight, color: color),
           ),
           textDirection: TextDirection.ltr,
         )..layout(maxWidth: 300);
@@ -1503,7 +1495,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     // DETAILS
     double y = 340;
     drawTextHeading(
-      '${student['bloodGroup'] ?? '?'.toString().toUpperCase()}',
+      student['bloodGroup'] ?? '?',
       cardWidth / 1.11,
       165.5,
       18,
@@ -1511,7 +1503,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       Colors.red,
     );
     drawTextHeading(
-      student['name'] ?? '?'.toString().toUpperCase(),
+      student['name'] ?? '?',
       cardWidth / 2,
       265,
       24,
