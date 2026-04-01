@@ -1598,9 +1598,51 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     } else {
       canvas.drawRect(cardRect, Paint()..color = const Color(0xFFEFEFEF));
     }
+    List<String> splitTextIntoLinesSmart(
+      String text, {
+      int maxLines = 3,
+      int minCharsPerLine = 9,
+    }) {
+      final words = text.trim().split(RegExp(r'\s+'));
+      final totalWords = words.length;
 
-    // TEXT HELPER
-    void drawText(
+      if (totalWords == 0) return [];
+
+      // Decide number of lines
+      int lines = (totalWords / 3).ceil(); // prefer 3 words per line
+      lines = lines.clamp(1, maxLines);
+
+      // Distribute words evenly
+      int wordsPerLine = (totalWords / lines).ceil();
+
+      List<List<String>> result = [];
+      int index = 0;
+
+      for (int i = 0; i < lines; i++) {
+        int remainingWords = totalWords - index;
+        int remainingLines = lines - i;
+
+        int take = (remainingWords / remainingLines).ceil();
+        take = take.clamp(2, 3); // enforce 2–3 words per line
+
+        result.add(words.sublist(index, (index + take).clamp(0, totalWords)));
+        index += take;
+
+        if (index >= totalWords) break;
+      }
+
+      // 🔥 Adjust for minimum characters
+      for (int i = 0; i < result.length - 1; i++) {
+        String current = result[i].join(' ');
+        if (current.length < minCharsPerLine && result[i + 1].isNotEmpty) {
+          result[i].add(result[i + 1].removeAt(0));
+        }
+      }
+
+      return result.map((e) => e.join(' ')).toList();
+    }
+
+    void drawTextHeading(
       String text,
       double x, // NEW: horizontal position
       double y, // vertical position (TOP of text)
@@ -1611,7 +1653,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     }) {
       final painter = TextPainter(
         text: TextSpan(
-          text: text,
+          text: text.toUpperCase(),
           style: GoogleFonts.poppins(
             fontSize: size,
             fontWeight: weight,
@@ -1632,6 +1674,104 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       }
 
       painter.paint(canvas, Offset(drawX, y));
+    }
+
+    void drawBalancedText(
+      String text,
+      double x,
+      double y,
+      double size,
+      FontWeight weight,
+      Color color, {
+      double lineGap = 2,
+    }) {
+      final lines = splitTextIntoLinesSmart(text);
+      for (int i = 0; i < lines.length; i++) {
+        final painter = TextPainter(
+          text: TextSpan(
+            text: lines[i],
+            style: TextStyle(fontSize: size, fontWeight: weight, color: color),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout(maxWidth: 300);
+
+        painter.paint(canvas, Offset(x, y + i * (painter.height + lineGap)));
+      }
+    }
+
+    // TEXT HELPER
+    void drawText(
+      String text,
+      double x,
+      double y,
+      double size,
+      FontWeight weight,
+      Color color,
+    ) {
+      final painter = TextPainter(
+        text: TextSpan(
+          text: text,
+          style: TextStyle(fontSize: size, fontWeight: weight, color: color),
+        ),
+        textDirection: TextDirection.ltr,
+        maxLines: 1, // 👈 prevents wrapping
+      )..layout(); // no width limit
+
+      painter.paint(canvas, Offset(x, y));
+    }
+
+    void drawTextStroke(
+      Canvas canvas,
+      String text,
+      double centerX, // 👈 pass center X instead of left X
+      double y,
+      double size,
+      FontWeight weight,
+      Color color,
+    ) {
+      final textStyle = TextStyle(fontSize: size, fontWeight: weight);
+
+      // 🔹 Measure text width
+      final measurePainter = TextPainter(
+        text: TextSpan(text: text, style: textStyle),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+      )..layout();
+
+      final textWidth = measurePainter.width;
+
+      // 👇 Calculate starting X so text is centered
+      final startX = centerX - (textWidth / 2);
+
+      // 🔸 Stroke (border)
+      final strokePaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..color = const Color(0xFFFFFFFF)
+        ..strokeJoin = StrokeJoin.round;
+
+      final strokePainter = TextPainter(
+        text: TextSpan(
+          text: text,
+          style: textStyle.copyWith(foreground: strokePaint),
+        ),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+      )..layout();
+
+      strokePainter.paint(canvas, Offset(startX, y));
+
+      // 🔸 Fill (text)
+      final fillPainter = TextPainter(
+        text: TextSpan(
+          text: text,
+          style: textStyle.copyWith(color: color),
+        ),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+      )..layout();
+
+      fillPainter.paint(canvas, Offset(startX, y));
     }
 
     List<String> splitTextIntoLines(
@@ -1668,33 +1808,33 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       return lines;
     }
 
-    void drawBalancedText(
-      String text,
-      double x,
-      double y,
-      double size,
-      FontWeight weight,
-      Color color, {
-      double lineGap = 3,
-    }) {
-      final lines = splitTextIntoLines(text, maxCharsPerLine: 20, maxLines: 3);
+    // void drawBalancedText(
+    //   String text,
+    //   double x,
+    //   double y,
+    //   double size,
+    //   FontWeight weight,
+    //   Color color, {
+    //   double lineGap = 3,
+    // }) {
+    //   final lines = splitTextIntoLines(text, maxCharsPerLine: 20, maxLines: 3);
 
-      for (int i = 0; i < lines.length; i++) {
-        final painter = TextPainter(
-          text: TextSpan(
-            text: lines[i],
-            style: GoogleFonts.poppins(
-              fontSize: size,
-              fontWeight: weight,
-              color: color,
-            ),
-          ),
-          textDirection: TextDirection.ltr,
-        )..layout(maxWidth: 200);
+    //   for (int i = 0; i < lines.length; i++) {
+    //     final painter = TextPainter(
+    //       text: TextSpan(
+    //         text: lines[i],
+    //         style: GoogleFonts.poppins(
+    //           fontSize: size,
+    //           fontWeight: weight,
+    //           color: color,
+    //         ),
+    //       ),
+    //       textDirection: TextDirection.ltr,
+    //     )..layout(maxWidth: 200);
 
-        painter.paint(canvas, Offset(x, y + i * (painter.height + lineGap)));
-      }
-    }
+    //     painter.paint(canvas, Offset(x, y + i * (painter.height + lineGap)));
+    //   }
+    // }
 
     // PHOTO RECT
     const double photoWidth = 156;
@@ -1751,7 +1891,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     //   FontWeight.w800,
     //   Colors.red,
     // );
-    drawText(
+    drawTextHeading(
       student['name'] ?? '?'.toString().toUpperCase(),
       cardWidth / 2,
       340,
@@ -1759,7 +1899,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       FontWeight.w800,
       Colors.red,
     );
-    drawText(
+    drawTextHeading(
       'STD: ${(student['batch'] ?? '?').toString().toUpperCase()}',
       cardWidth / 2,
       370,
@@ -1769,28 +1909,29 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     );
 
     drawText(
-      'Ad.No: ${student['admissionNumber'] ?? '?'.toString().toUpperCase()}      Dob: ${student['dateOfBirth'] ?? '?'.toString().toUpperCase()}',
-      cardWidth / 2,
-      395,
+      'Ad.No: ${student['admissionNumber'] ?? '?'.toString().toUpperCase()}',
+      30,
+      400,
       18,
       FontWeight.w700,
-      Colors.blue,
+      const ui.Color.fromARGB(255, 33, 79, 243),
     );
-
-    final address = student['address'] ?? '?';
-    drawBalancedText(
-      address,
-      cardWidth / 9.5,
-      422,
-      18,
-      FontWeight.w700,
-      Colors.black,
-    );
-
     drawText(
-      'Ph:${student['contactNumber'] ?? '?'.toString().toUpperCase()} , ${student['phoneNumber'] ?? '?'.toString().toUpperCase()}',
+      'Dob: ${student['dateOfBirth'] ?? '?'.toString().toUpperCase()}',
       cardWidth / 2,
-      515,
+      400,
+      18,
+      FontWeight.w700,
+      const ui.Color.fromARGB(255, 33, 79, 243),
+    );
+    final address = student['address'] ?? '?';
+    drawBalancedText(address, 30, 427, 18, FontWeight.w500, Colors.black);
+
+    drawTextStroke(
+      canvas,
+      'Ph: ${student['contactNumber'] ?? '?'.toString().toUpperCase()} - ${student['phoneNumber'] ?? '?'.toString().toUpperCase()}',
+      cardWidth / 2,
+      520,
       16,
       FontWeight.w700,
       const ui.Color.fromARGB(255, 0, 0, 0),
