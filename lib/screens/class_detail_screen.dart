@@ -1924,8 +1924,13 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       FontWeight.w700,
       const ui.Color.fromARGB(255, 33, 79, 243),
     );
-    final address = student['address'] ?? '?';
-    drawBalancedText(address, 30, 427, 18, FontWeight.w500, Colors.black);
+    final address1 = student['address1'] ?? '?';
+    final address2 = student['address2'] ?? '?';
+    final address3 = student['address3'] ?? '?';
+
+    drawBalancedText(address1, 30, 427, 18, FontWeight.w500, Colors.black);
+    drawBalancedText(address2, 30, 447, 18, FontWeight.w500, Colors.black);
+    drawBalancedText(address3, 30, 467, 18, FontWeight.w500, Colors.black);
 
     drawTextStroke(
       canvas,
