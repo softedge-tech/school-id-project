@@ -1,10 +1,13 @@
-import 'dart:io';
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:image_cropper/image_cropper.dart';
-import '../../auth_provider.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
+import 'package:image/image.dart' as img;
 import '../../models.dart';
 
 class StudentEditScreen extends StatefulWidget {
@@ -29,41 +32,36 @@ class _StudentEditScreenState extends State<StudentEditScreen> {
   final _rollController = TextEditingController();
   final _fatherController = TextEditingController();
   final _motherController = TextEditingController();
-  final _addressController = TextEditingController();
+  final _addressController1 = TextEditingController();
+  final _addressController2 = TextEditingController();
+  final _addressController3 = TextEditingController();
   final _contactController = TextEditingController();
   final _bloodGroupController = TextEditingController();
 
   Student? _student;
-  File? _newPhoto;
   bool _isLoading = true;
+  bool _isSaving = false;
+
+  // Photo state
+  Uint8List? _processedPhotoBytes; // transparent PNG ready to upload
+  bool _isProcessingPhoto = false;
+  String _photoStatus = '';
+
+  static const String _removeBgApiKey = 'JN8MSbSLnCZVgaLe4HnX9Noh';
+
+  // Firestore reference shorthand
+  DocumentReference get _studentDoc => FirebaseFirestore.instance
+      .collection('schools')
+      .doc(widget.schoolId)
+      .collection('classes')
+      .doc(widget.classId)
+      .collection('students')
+      .doc(widget.studentId);
 
   @override
   void initState() {
     super.initState();
     _loadStudent();
-  }
-
-  Future<void> _loadStudent() async {
-    await context.read<StudentProvider>().loadStudent(
-          widget.schoolId,
-          widget.classId,
-          widget.studentId,
-        );
-
-    final student = context.read<StudentProvider>().selectedStudent;
-    if (student != null) {
-      setState(() {
-        _student = student;
-        _nameController.text = student.name;
-        _rollController.text = student.rollNumber;
-        _fatherController.text = student.fatherName;
-        _motherController.text = student.motherName;
-        _addressController.text = student.address;
-        _contactController.text = student.contactNumber;
-        _bloodGroupController.text = student.bloodGroup ?? '';
-        _isLoading = false;
-      });
-    }
   }
 
   @override
@@ -72,110 +70,226 @@ class _StudentEditScreenState extends State<StudentEditScreen> {
     _rollController.dispose();
     _fatherController.dispose();
     _motherController.dispose();
-    _addressController.dispose();
+    _addressController1.dispose();
+    _addressController2.dispose();
+    _addressController3.dispose();
     _contactController.dispose();
     _bloodGroupController.dispose();
     super.dispose();
   }
 
-  Future<void> _pickAndCropImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+  // ── Load ─────────────────────────────────────────────────────
 
-    if (pickedFile != null) {
-      final croppedFile = await ImageCropper().cropImage(
-        sourcePath: pickedFile.path,
-        aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
-        uiSettings: [
-          AndroidUiSettings(
-            toolbarTitle: 'Crop Photo',
-            toolbarColor: Theme.of(context).primaryColor,
-            toolbarWidgetColor: Colors.white,
-            initAspectRatio: CropAspectRatioPreset.square,
-            lockAspectRatio: true,
-          ),
-          IOSUiSettings(
-            title: 'Crop Photo',
-            aspectRatioLockEnabled: true,
-          ),
-        ],
-      );
+  Future<void> _loadStudent() async {
+    try {
+      final doc = await _studentDoc.get();
+      if (!mounted) return;
 
-      if (croppedFile != null) {
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
         setState(() {
-          _newPhoto = File(croppedFile.path);
+          _student = Student.fromMap(data, doc.id);
+          _nameController.text = data['name'] ?? '';
+          _rollController.text = data['rollNumber'] ?? '';
+          _fatherController.text = data['fatherName'] ?? '';
+          _motherController.text = data['motherName'] ?? '';
+          _addressController1.text = data['address1'] ?? '';
+          _addressController2.text = data['address2'] ?? '';
+          _addressController3.text = data['address3'] ?? '';
+          _contactController.text = data['contactNumber'] ?? '';
+          _bloodGroupController.text = data['bloodGroup'] ?? '';
+          _isLoading = false;
         });
+      } else {
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showSnack('Failed to load student: $e', isError: true);
       }
     }
   }
+
+  // ── Image helpers ─────────────────────────────────────────────
+
+  static Uint8List _resizeImage(Uint8List bytes) {
+    final image = img.decodeImage(bytes);
+    if (image == null) return bytes;
+    if (image.width <= 800 && image.height <= 800) return bytes;
+    final resized = image.width > image.height
+        ? img.copyResize(image, width: 800)
+        : img.copyResize(image, height: 800);
+    return Uint8List.fromList(img.encodeJpg(resized, quality: 90));
+  }
+
+  Future<Uint8List> _removeBackground(Uint8List imageBytes) async {
+    final resized = await compute(_resizeImage, imageBytes);
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('https://api.remove.bg/v1.0/removebg'),
+    );
+    request.headers['X-Api-Key'] = _removeBgApiKey;
+    request.fields['size'] = 'auto';
+    request.fields['format'] = 'png';
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'image_file',
+        resized,
+        filename: 'photo.jpg',
+      ),
+    );
+
+    final streamed = await request.send().timeout(const Duration(seconds: 60));
+    final response = await http.Response.fromStream(streamed);
+
+    if (response.statusCode == 200) return response.bodyBytes;
+    final body = jsonDecode(response.body);
+    final msg = (body['errors'] as List?)?.first?['title'] ?? 'Unknown error';
+    throw Exception('remove.bg: $msg');
+  }
+
+  Future<void> _pickAndProcessImage() async {
+    final file = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 90,
+    );
+    if (file == null) return;
+
+    setState(() {
+      _isProcessingPhoto = true;
+      _photoStatus = 'Removing background…';
+      _processedPhotoBytes = null;
+    });
+
+    try {
+      final bytes = await file.readAsBytes();
+      final transparent = await _removeBackground(bytes);
+      if (mounted) {
+        setState(() {
+          _processedPhotoBytes = transparent;
+          _photoStatus = 'Background removed ✓';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _photoStatus = '');
+        _showSnack('Background removal failed: $e', isError: true);
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessingPhoto = false);
+    }
+  }
+
+  // ── Upload photo to Firebase Storage ─────────────────────────
+
+  Future<String> _uploadPhoto() async {
+    final ref = FirebaseStorage.instance.ref().child(
+      'students/${widget.schoolId}/${widget.classId}/${widget.studentId}'
+      '/${DateTime.now().millisecondsSinceEpoch}.png',
+    );
+    final task = await ref.putData(
+      _processedPhotoBytes!,
+      SettableMetadata(contentType: 'image/png'),
+    );
+    return task.ref.getDownloadURL();
+  }
+
+  // ── Save to Firestore ─────────────────────────────────────────
 
   Future<void> _saveChanges() async {
     if (!_formKey.currentState!.validate()) return;
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: const Text('Confirm Changes'),
-        content: const Text('Are you sure you want to save these changes?'),
+        content: const Text('Save these changes to the student record?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Save'),
           ),
         ],
       ),
     );
-
     if (confirmed != true) return;
 
-    final success = await context.read<StudentProvider>().updateStudent(
-          schoolId: widget.schoolId,
-          classId: widget.classId,
-          studentId: widget.studentId,
-          data: {
-            'name': _nameController.text.trim(),
-            'rollNumber': _rollController.text.trim(),
-            'fatherName': _fatherController.text.trim(),
-            'motherName': _motherController.text.trim(),
-            'address': _addressController.text.trim(),
-            'contactNumber': _contactController.text.trim(),
-            'bloodGroup': _bloodGroupController.text.trim(),
-          },
-          newPhoto: _newPhoto,
-        );
+    setState(() => _isSaving = true);
 
-    if (mounted) {
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Student updated successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        context.pop();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              context.read<StudentProvider>().error ?? 'Failed to update',
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
+    try {
+      // Step 1 — upload new photo if available
+      String? newPhotoUrl;
+      if (_processedPhotoBytes != null) {
+        newPhotoUrl = await _uploadPhoto();
       }
+
+      // Step 2 — build update payload
+      final updateData = <String, dynamic>{
+        'name': _nameController.text.trim(),
+        'rollNumber': _rollController.text.trim(),
+        'fatherName': _fatherController.text.trim(),
+        'motherName': _motherController.text.trim(),
+        'address1': _addressController1.text.trim(),
+        'address2': _addressController2.text.trim(),
+        'address3': _addressController3.text.trim(),
+        'contactNumber': _contactController.text.trim(),
+        'bloodGroup': _bloodGroupController.text.trim(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        if (newPhotoUrl != null) 'photoUrl': newPhotoUrl,
+      };
+
+      // Step 3 — write to Firestore
+      await _studentDoc.update(updateData);
+
+      if (mounted) {
+        _showSnack('Student updated successfully');
+        context.pop();
+      }
+    } catch (e) {
+      _showSnack('Save failed: $e', isError: true);
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
   }
+
+  // ── Snack helper ──────────────────────────────────────────────
+
+  void _showSnack(String msg, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              isError ? Icons.error_outline : Icons.check_circle_outline,
+              color: Colors.white,
+              size: 18,
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: Text(msg)),
+          ],
+        ),
+        backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(12),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // BUILD
+  // ─────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (_student == null) {
@@ -185,14 +299,29 @@ class _StudentEditScreenState extends State<StudentEditScreen> {
       );
     }
 
+    final busy = _isSaving || _isProcessingPhoto;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Student'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: _saveChanges,
-          ),
+          if (_isSaving)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              ),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.save),
+              onPressed: busy ? null : _saveChanges,
+            ),
         ],
       ),
       body: SingleChildScrollView(
@@ -202,115 +331,271 @@ class _StudentEditScreenState extends State<StudentEditScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // ── Photo Section ──────────────────────────────────
               Center(
-                child: Stack(
+                child: Column(
                   children: [
-                    CircleAvatar(
-                      radius: 60,
-                      backgroundImage: _newPhoto != null
-                          ? FileImage(_newPhoto!)
-                          : (_student!.photoUrl != null
-                              ? NetworkImage(_student!.photoUrl!)
-                              : null) as ImageProvider?,
-                      child: _newPhoto == null && _student!.photoUrl == null
-                          ? const Icon(Icons.person, size: 60)
-                          : null,
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: CircleAvatar(
-                        backgroundColor: Theme.of(context).primaryColor,
-                        child: IconButton(
-                          icon: const Icon(Icons.camera_alt, color: Colors.white),
-                          onPressed: _pickAndCropImage,
-                        ),
+                    GestureDetector(
+                      onTap: busy ? null : _pickAndProcessImage,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // Avatar
+                          Container(
+                            width: 130,
+                            height: 130,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.grey.shade100,
+                              border: Border.all(
+                                color: _processedPhotoBytes != null
+                                    ? Theme.of(context).primaryColor
+                                    : Colors.grey.shade300,
+                                width: _processedPhotoBytes != null ? 2.5 : 1.5,
+                              ),
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: _processedPhotoBytes != null
+                                ? Image.memory(
+                                    _processedPhotoBytes!,
+                                    fit: BoxFit.cover,
+                                  )
+                                : (_student!.photoUrl != null
+                                      ? Image.network(
+                                          _student!.photoUrl!,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) =>
+                                              const Icon(
+                                                Icons.person,
+                                                size: 60,
+                                              ),
+                                        )
+                                      : const Icon(Icons.person, size: 60)),
+                          ),
+
+                          // Processing overlay
+                          if (_isProcessingPhoto)
+                            Container(
+                              width: 130,
+                              height: 130,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.black.withOpacity(0.55),
+                              ),
+                              child: const Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: 28,
+                                    height: 28,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'Processing…',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                          // Saving dim
+                          if (_isSaving)
+                            Container(
+                              width: 130,
+                              height: 130,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.black.withOpacity(0.25),
+                              ),
+                            ),
+
+                          // Camera badge
+                          if (!busy)
+                            Positioned(
+                              bottom: 4,
+                              right: 4,
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).primaryColor,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.camera_alt,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    // Status label
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      child: _photoStatus.isNotEmpty
+                          ? Text(
+                              _photoStatus,
+                              key: ValueKey(_photoStatus),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _photoStatus.contains('✓')
+                                    ? Colors.green.shade700
+                                    : Colors.grey.shade600,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            )
+                          : Text(
+                              'Tap to change photo',
+                              key: const ValueKey('hint'),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
                     ),
                   ],
                 ),
               ),
+
               const SizedBox(height: 24),
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Student Name',
-                  prefixIcon: Icon(Icons.person),
-                ),
-                validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+
+              // ── Form Fields ────────────────────────────────────
+              _field(
+                _nameController,
+                'Student Name',
+                Icons.person,
+                required: true,
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _rollController,
-                decoration: const InputDecoration(
-                  labelText: 'Roll Number',
-                  prefixIcon: Icon(Icons.numbers),
-                ),
-                validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+              _field(
+                _rollController,
+                'Roll Number',
+                Icons.numbers,
+                required: true,
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _fatherController,
-                decoration: const InputDecoration(
-                  labelText: "Father's Name",
-                  prefixIcon: Icon(Icons.person_outline),
-                ),
-                validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+              _field(
+                _fatherController,
+                "Father's Name",
+                Icons.person_outline,
+                required: true,
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _motherController,
-                decoration: const InputDecoration(
-                  labelText: "Mother's Name",
-                  prefixIcon: Icon(Icons.person_outline),
-                ),
-                validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+              _field(
+                _motherController,
+                "Mother's Name",
+                Icons.person_outline,
+                required: true,
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _contactController,
-                decoration: const InputDecoration(
-                  labelText: 'Contact Number',
-                  prefixIcon: Icon(Icons.phone),
-                ),
-                keyboardType: TextInputType.phone,
-                validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+              _field(
+                _contactController,
+                'Contact Number',
+                Icons.phone,
+                required: true,
+                keyboard: TextInputType.phone,
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _bloodGroupController,
-                decoration: const InputDecoration(
-                  labelText: 'Blood Group',
-                  prefixIcon: Icon(Icons.bloodtype),
-                ),
+              _field(_bloodGroupController, 'Blood Group', Icons.bloodtype),
+              _field(
+                _addressController1,
+                'Address Line 1',
+                Icons.home,
+                required: true,
+                maxLines: 2,
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _addressController,
-                decoration: const InputDecoration(
-                  labelText: 'Address',
-                  prefixIcon: Icon(Icons.home),
-                ),
-                maxLines: 3,
-                validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+              _field(
+                _addressController2,
+                'Address Line 2',
+                Icons.home,
+                required: true,
+                maxLines: 2,
               ),
+              _field(
+                _addressController3,
+                'Address Line 3',
+                Icons.home,
+                required: true,
+                maxLines: 2,
+              ),
+
               const SizedBox(height: 32),
-              Consumer<StudentProvider>(
-                builder: (context, provider, child) {
-                  return ElevatedButton(
-                    onPressed: provider.isLoading ? null : _saveChanges,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+
+              // ── Save Button ────────────────────────────────────
+              SizedBox(
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: busy ? null : _saveChanges,
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: provider.isLoading
-                        ? const CircularProgressIndicator()
-                        : const Text('Save Changes', style: TextStyle(fontSize: 16)),
-                  );
-                },
+                  ),
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Save Changes',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                ),
               ),
+
+              const SizedBox(height: 32),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // ── Field builder ─────────────────────────────────────────────
+
+  Widget _field(
+    TextEditingController controller,
+    String label,
+    IconData icon, {
+    bool required = false,
+    TextInputType keyboard = TextInputType.text,
+    int maxLines = 1,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: keyboard,
+        maxLines: maxLines,
+        decoration: InputDecoration(
+          labelText: required ? '$label *' : label,
+          prefixIcon: Icon(icon),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+        validator: required
+            ? (v) => (v == null || v.trim().isEmpty) ? 'Required' : null
+            : null,
       ),
     );
   }

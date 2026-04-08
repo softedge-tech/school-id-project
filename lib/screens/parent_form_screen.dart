@@ -166,15 +166,6 @@ class _ParentFormScreenState extends State<ParentFormScreen>
     throw Exception('remove.bg: $msg');
   }
 
-  static Uint8List _addBlueBackground(Uint8List transparentPngBytes) {
-    final fg = img.decodeImage(transparentPngBytes);
-    if (fg == null) return transparentPngBytes;
-    final bg = img.Image(width: fg.width, height: fg.height, numChannels: 4);
-    img.fill(bg, color: img.ColorRgba8(0, 70, 160, 255));
-    img.compositeImage(bg, fg, blend: img.BlendMode.alpha);
-    return Uint8List.fromList(img.encodePng(bg));
-  }
-
   // ── Submit ───────────────────────────────────────────────────
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
@@ -203,7 +194,7 @@ class _ParentFormScreenState extends State<ParentFormScreen>
 
       final studentId = studentRef.id;
 
-      // Step 1
+      // Step 1 – Remove background
       Uint8List transparentBytes;
       try {
         transparentBytes = await _removeBackground(_photoBytes!);
@@ -213,14 +204,9 @@ class _ParentFormScreenState extends State<ParentFormScreen>
         return;
       }
 
-      // Step 2
-      setState(() {
-        _submitProgress = 2;
-        _submitStatus = 'Adding blue background…';
-      });
-      final blueBytes = await compute(_addBlueBackground, transparentBytes);
+      // Step 2 – skipped (no colour background added)
 
-      // Step 3
+      // Step 3 – Upload transparent PNG
       setState(() {
         _submitProgress = 3;
         _submitStatus = 'Uploading photo…';
@@ -230,12 +216,12 @@ class _ParentFormScreenState extends State<ParentFormScreen>
         '/${DateTime.now().millisecondsSinceEpoch}.png',
       );
       final uploadTask = await storageRef.putData(
-        blueBytes,
+        transparentBytes,
         SettableMetadata(contentType: 'image/png'),
       );
       final photoUrl = await uploadTask.ref.getDownloadURL();
 
-      // Step 4
+      // Step 4 – Save to Firestore
       setState(() {
         _submitProgress = 4;
         _submitStatus = 'Saving student data…';
@@ -490,7 +476,6 @@ class _ParentFormScreenState extends State<ParentFormScreen>
                 ),
               ),
             ),
-            // Subtle geometric overlay
             Positioned(
               right: -30,
               top: -30,
@@ -815,7 +800,7 @@ class _ParentFormScreenState extends State<ParentFormScreen>
 
   // ── Progress Stepper ─────────────────────────────────────────
   Widget _buildProgressIndicator() {
-    final steps = ['Background', 'Blue BG', 'Upload', 'Saving'];
+    final steps = ['Background', 'Upload', 'Saving'];
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
@@ -834,7 +819,6 @@ class _ParentFormScreenState extends State<ParentFormScreen>
           Row(
             children: List.generate(steps.length * 2 - 1, (i) {
               if (i.isOdd) {
-                // Connector line
                 final stepIndex = (i ~/ 2) + 1;
                 return Expanded(
                   child: AnimatedContainer(

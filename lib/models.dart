@@ -217,7 +217,11 @@ class Student {
   final String rollNumber;
   final String fatherName;
   final String motherName;
-  final String address;
+  final String address1;
+  final String address2;
+
+  final String address3;
+
   final String contactNumber;
   final String phoneNumber;
   final String admissionNumber;
@@ -236,7 +240,9 @@ class Student {
     required this.rollNumber,
     required this.fatherName,
     required this.motherName,
-    required this.address,
+    required this.address1,
+    required this.address2,
+    required this.address3,
     required this.contactNumber,
     this.photoUrl,
     this.bloodGroup,
@@ -261,7 +267,9 @@ class Student {
       rollNumber: map['rollNumber'] ?? '',
       fatherName: map['fatherName'] ?? '',
       motherName: map['motherName'] ?? '',
-      address: map['address'] ?? '',
+      address1: map['address1'] ?? '',
+      address2: map['address2'] ?? '',
+      address3: map['address3'] ?? '',
       contactNumber: map['contactNumber'] ?? '',
       photoUrl: map['photoUrl'],
       bloodGroup: map['bloodGroup'],
@@ -285,7 +293,9 @@ class Student {
       'rollNumber': rollNumber,
       'fatherName': fatherName,
       'motherName': motherName,
-      'address': address,
+      'address1': address1,
+      'address2': address2,
+      'address3': address3,
       'contactNumber': contactNumber,
       'photoUrl': photoUrl,
       'bloodGroup': bloodGroup,
@@ -317,7 +327,9 @@ class Student {
       rollNumber: rollNumber ?? this.rollNumber,
       fatherName: fatherName ?? this.fatherName,
       motherName: motherName ?? this.motherName,
-      address: address ?? this.address,
+      address1: address ?? this.address1,
+      address2: address ?? this.address2,
+      address3: address ?? this.address3,
       contactNumber: contactNumber ?? this.contactNumber,
       photoUrl: photoUrl ?? this.photoUrl,
       bloodGroup: bloodGroup ?? this.bloodGroup,

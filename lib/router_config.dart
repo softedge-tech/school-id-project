@@ -22,7 +22,9 @@ class AppRouter {
         final isAuthenticated = authProvider.isAuthenticated;
         final currentUser = authProvider.currentUser;
         final isLoginRoute = state.matchedLocation == '/login';
-        final isParentFormRoute = state.matchedLocation.startsWith('/parent-form');
+        final isParentFormRoute = state.matchedLocation.startsWith(
+          '/parent-form',
+        );
 
         // Allow parent form without auth
         if (isParentFormRoute) {
@@ -66,10 +68,7 @@ class AppRouter {
           builder: (context, state) {
             final schoolId = state.pathParameters['schoolId']!;
             final classId = state.pathParameters['classId']!;
-            return ClassDetailScreen(
-              schoolId: schoolId,
-              classId: classId,
-            );
+            return ClassDetailScreen(schoolId: schoolId, classId: classId);
           },
         ),
         GoRoute(
@@ -94,10 +93,7 @@ class AppRouter {
           builder: (context, state) {
             final schoolId = state.pathParameters['schoolId']!;
             final classId = state.pathParameters['classId']!;
-            return ParentFormScreen(
-              schoolId: schoolId,
-              classId: classId,
-            );
+            return ParentFormScreen(schoolId: schoolId, classId: classId);
           },
         ),
       ],

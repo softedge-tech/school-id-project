@@ -236,7 +236,9 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                         'motherName': s.motherName,
                         'contactNumber': s.contactNumber,
                         'bloodGroup': s.bloodGroup,
-                        'address': s.address,
+                        'address1': s.address1,
+                        'address2': s.address2,
+                        'address3': s.address3,
                         'photoUrl': s.photoUrl,
                         'admissionNumber': s.admissionNumber,
                         'batch': s.batch,
@@ -828,7 +830,9 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
         barrierDismissible: false,
         builder: (_) => const Center(child: CircularProgressIndicator()),
       );
-      print(student['admissionNumber']);
+      // print(
+      //   '${student['address1']} ${student['address2']} ${student['address3']} ',
+      // );
       var imageBytes;
       if (prefix == 'ID-12') {
         imageBytes = await _generateIDCardImage(
@@ -1486,7 +1490,8 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     } else {
       canvas.drawRect(
         photoRect,
-        Paint()..color = const ui.Color.fromARGB(0, 0, 0, 0).withOpacity(0.1),
+        Paint()
+          ..color = const ui.Color.fromARGB(0, 255, 255, 255).withOpacity(0.1),
       );
     }
 
@@ -1536,8 +1541,13 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       Colors.black,
     );
 
-    final address = student['address'] ?? '?';
-    drawBalancedText(address, 30, 393, 16, FontWeight.w500, Colors.black);
+    final address1 = student['address1'] ?? '?';
+    final address2 = student['address2'] ?? '?';
+    final address3 = student['address3'] ?? '?';
+
+    drawBalancedText(address1, 30, 389, 18, FontWeight.w500, Colors.black);
+    drawBalancedText(address2, 30, 410, 18, FontWeight.w500, Colors.black);
+    drawBalancedText(address3, 30, 430, 18, FontWeight.w500, Colors.black);
 
     drawText(
       'Contact: ${student['contactNumber'] ?? '?'.toString().toUpperCase()}',
@@ -1929,7 +1939,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     final address3 = student['address3'] ?? '?';
 
     drawBalancedText(address1, 30, 427, 18, FontWeight.w500, Colors.black);
-    drawBalancedText(address2, 30, 447, 18, FontWeight.w500, Colors.black);
+    drawBalancedText(address2, 30, 446, 18, FontWeight.w500, Colors.black);
     drawBalancedText(address3, 30, 467, 18, FontWeight.w500, Colors.black);
 
     drawTextStroke(
