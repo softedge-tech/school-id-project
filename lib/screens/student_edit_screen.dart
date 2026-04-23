@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -6,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
 import '../../models.dart';
 
@@ -43,11 +41,9 @@ class _StudentEditScreenState extends State<StudentEditScreen> {
   bool _isSaving = false;
 
   // Photo state
-  Uint8List? _processedPhotoBytes; // transparent PNG ready to upload
+  Uint8List? _processedPhotoBytes; // compressed JPEG ready to upload
   bool _isProcessingPhoto = false;
   String _photoStatus = '';
-
-  static const String _removeBgApiKey = 'JN8MSbSLnCZVgaLe4HnX9Noh';
 
   // Firestore reference shorthand
   DocumentReference get _studentDoc => FirebaseFirestore.instance
@@ -113,40 +109,23 @@ class _StudentEditScreenState extends State<StudentEditScreen> {
 
   // ── Image helpers ─────────────────────────────────────────────
 
-  static Uint8List _resizeImage(Uint8List bytes) {
+  /// Compress on a background isolate: resize to max 1024 px on the longer
+  /// side, then encode as JPEG at 85 % quality to reduce file size.
+  static Uint8List _compressImage(Uint8List bytes) {
     final image = img.decodeImage(bytes);
     if (image == null) return bytes;
-    if (image.width <= 800 && image.height <= 800) return bytes;
-    final resized = image.width > image.height
-        ? img.copyResize(image, width: 800)
-        : img.copyResize(image, height: 800);
-    return Uint8List.fromList(img.encodeJpg(resized, quality: 90));
-  }
 
-  Future<Uint8List> _removeBackground(Uint8List imageBytes) async {
-    final resized = await compute(_resizeImage, imageBytes);
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('https://api.remove.bg/v1.0/removebg'),
-    );
-    request.headers['X-Api-Key'] = _removeBgApiKey;
-    request.fields['size'] = 'auto';
-    request.fields['format'] = 'png';
-    request.files.add(
-      http.MultipartFile.fromBytes(
-        'image_file',
-        resized,
-        filename: 'photo.jpg',
-      ),
-    );
+    const maxDim = 1024;
+    final img.Image resized;
+    if (image.width >= image.height && image.width > maxDim) {
+      resized = img.copyResize(image, width: maxDim);
+    } else if (image.height > image.width && image.height > maxDim) {
+      resized = img.copyResize(image, height: maxDim);
+    } else {
+      resized = image; // already small enough
+    }
 
-    final streamed = await request.send().timeout(const Duration(seconds: 60));
-    final response = await http.Response.fromStream(streamed);
-
-    if (response.statusCode == 200) return response.bodyBytes;
-    final body = jsonDecode(response.body);
-    final msg = (body['errors'] as List?)?.first?['title'] ?? 'Unknown error';
-    throw Exception('remove.bg: $msg');
+    return Uint8List.fromList(img.encodeJpg(resized, quality: 85));
   }
 
   Future<void> _pickAndProcessImage() async {
@@ -158,23 +137,23 @@ class _StudentEditScreenState extends State<StudentEditScreen> {
 
     setState(() {
       _isProcessingPhoto = true;
-      _photoStatus = 'Removing background…';
+      _photoStatus = 'Compressing photo…';
       _processedPhotoBytes = null;
     });
 
     try {
       final bytes = await file.readAsBytes();
-      final transparent = await _removeBackground(bytes);
+      final compressed = await compute(_compressImage, bytes);
       if (mounted) {
         setState(() {
-          _processedPhotoBytes = transparent;
-          _photoStatus = 'Background removed ✓';
+          _processedPhotoBytes = compressed;
+          _photoStatus = 'Photo ready ✓';
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() => _photoStatus = '');
-        _showSnack('Background removal failed: $e', isError: true);
+        _showSnack('Image processing failed: $e', isError: true);
       }
     } finally {
       if (mounted) setState(() => _isProcessingPhoto = false);
@@ -186,11 +165,11 @@ class _StudentEditScreenState extends State<StudentEditScreen> {
   Future<String> _uploadPhoto() async {
     final ref = FirebaseStorage.instance.ref().child(
       'students/${widget.schoolId}/${widget.classId}/${widget.studentId}'
-      '/${DateTime.now().millisecondsSinceEpoch}.png',
+      '/${DateTime.now().millisecondsSinceEpoch}.jpg',
     );
     final task = await ref.putData(
       _processedPhotoBytes!,
-      SettableMetadata(contentType: 'image/png'),
+      SettableMetadata(contentType: 'image/jpeg'),
     );
     return task.ref.getDownloadURL();
   }
@@ -395,7 +374,7 @@ class _StudentEditScreenState extends State<StudentEditScreen> {
                                   ),
                                   SizedBox(height: 8),
                                   Text(
-                                    'Processing…',
+                                    'Compressing…',
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 11,

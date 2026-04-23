@@ -1,11 +1,9 @@
-import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
 
 // ─────────────────────────────────────────────────────────────
@@ -64,14 +62,12 @@ class _ParentFormScreenState extends State<ParentFormScreen>
   bool _isSubmitting = false;
   bool _isSubmitted = false;
   String _submitStatus = '';
-  int _submitProgress = 0; // 0–4
+  int _submitProgress = 0; // 0–3
 
   late AnimationController _fadeCtrl;
   late AnimationController _successCtrl;
   late Animation<double> _fadeAnim;
   late Animation<double> _scaleAnim;
-
-  static const String _removeBgApiKey = 'JN8MSbSLnCZVgaLe4HnX9Noh';
 
   @override
   void initState() {
@@ -130,40 +126,23 @@ class _ParentFormScreenState extends State<ParentFormScreen>
     }
   }
 
-  static Uint8List _resizeImage(Uint8List bytes) {
+  /// Compress on a background isolate: resize to max 1024 px on the longer
+  /// side, then encode as JPEG at 85 % quality to reduce file size.
+  static Uint8List _compressImage(Uint8List bytes) {
     final image = img.decodeImage(bytes);
     if (image == null) return bytes;
-    if (image.width <= 800 && image.height <= 800) return bytes;
-    final resized = image.width > image.height
-        ? img.copyResize(image, width: 800)
-        : img.copyResize(image, height: 800);
-    return Uint8List.fromList(img.encodeJpg(resized, quality: 90));
-  }
 
-  Future<Uint8List> _removeBackground(Uint8List imageBytes) async {
-    final resized = await compute(_resizeImage, imageBytes);
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('https://api.remove.bg/v1.0/removebg'),
-    );
-    request.headers['X-Api-Key'] = _removeBgApiKey;
-    request.fields['size'] = 'auto';
-    request.fields['format'] = 'png';
-    request.files.add(
-      http.MultipartFile.fromBytes(
-        'image_file',
-        resized,
-        filename: 'photo.jpg',
-      ),
-    );
+    const maxDim = 1024;
+    final img.Image resized;
+    if (image.width >= image.height && image.width > maxDim) {
+      resized = img.copyResize(image, width: maxDim);
+    } else if (image.height > image.width && image.height > maxDim) {
+      resized = img.copyResize(image, height: maxDim);
+    } else {
+      resized = image; // already small enough
+    }
 
-    final streamed = await request.send().timeout(const Duration(seconds: 60));
-    final response = await http.Response.fromStream(streamed);
-
-    if (response.statusCode == 200) return response.bodyBytes;
-    final body = jsonDecode(response.body);
-    final msg = (body['errors'] as List?)?.first?['title'] ?? 'Unknown error';
-    throw Exception('remove.bg: $msg');
+    return Uint8List.fromList(img.encodeJpg(resized, quality: 85));
   }
 
   // ── Submit ───────────────────────────────────────────────────
@@ -177,7 +156,7 @@ class _ParentFormScreenState extends State<ParentFormScreen>
     setState(() {
       _isSubmitting = true;
       _submitProgress = 1;
-      _submitStatus = 'Removing background…';
+      _submitStatus = 'Compressing photo…';
     });
 
     try {
@@ -194,36 +173,31 @@ class _ParentFormScreenState extends State<ParentFormScreen>
 
       final studentId = studentRef.id;
 
-      // Step 1 – Remove background
-      Uint8List transparentBytes;
-      try {
-        transparentBytes = await _removeBackground(_photoBytes!);
-      } catch (e) {
-        _showSnack('Background removal failed: $e', isError: true);
-        setState(() => _isSubmitting = false);
-        return;
-      }
+      // Step 1 – Compress image in background isolate
+      final Uint8List compressedBytes = await compute(
+        _compressImage,
+        _photoBytes!,
+      );
 
-      // Step 2 – skipped (no colour background added)
-
-      // Step 3 – Upload transparent PNG
+      // Step 2 – Upload compressed JPEG to Firebase Storage
       setState(() {
-        _submitProgress = 3;
+        _submitProgress = 2;
         _submitStatus = 'Uploading photo…';
       });
+
       final storageRef = storage.ref().child(
         'students/${widget.schoolId}/${widget.classId}/$studentId'
-        '/${DateTime.now().millisecondsSinceEpoch}.png',
+        '/${DateTime.now().millisecondsSinceEpoch}.jpg',
       );
       final uploadTask = await storageRef.putData(
-        transparentBytes,
-        SettableMetadata(contentType: 'image/png'),
+        compressedBytes,
+        SettableMetadata(contentType: 'image/jpeg'),
       );
       final photoUrl = await uploadTask.ref.getDownloadURL();
 
-      // Step 4 – Save to Firestore
+      // Step 3 – Save to Firestore
       setState(() {
-        _submitProgress = 4;
+        _submitProgress = 3;
         _submitStatus = 'Saving student data…';
       });
       await studentRef.set({
@@ -800,7 +774,7 @@ class _ParentFormScreenState extends State<ParentFormScreen>
 
   // ── Progress Stepper ─────────────────────────────────────────
   Widget _buildProgressIndicator() {
-    final steps = ['Background', 'Upload', 'Saving'];
+    final steps = ['Compress', 'Upload', 'Saving'];
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
