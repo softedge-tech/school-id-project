@@ -34,14 +34,18 @@ class _StudentEditScreenState extends State<StudentEditScreen> {
   final _addressController2 = TextEditingController();
   final _addressController3 = TextEditingController();
   final _contactController = TextEditingController();
+  final _phoneNumberController = TextEditingController();
   final _bloodGroupController = TextEditingController();
+  final _batchController = TextEditingController();
+  final _admissionNumberController = TextEditingController();
+  final _dobController = TextEditingController();
 
   Student? _student;
   bool _isLoading = true;
   bool _isSaving = false;
 
   // Photo state
-  Uint8List? _processedPhotoBytes; // compressed JPEG ready to upload
+  Uint8List? _processedPhotoBytes;
   bool _isProcessingPhoto = false;
   String _photoStatus = '';
 
@@ -70,7 +74,11 @@ class _StudentEditScreenState extends State<StudentEditScreen> {
     _addressController2.dispose();
     _addressController3.dispose();
     _contactController.dispose();
+    _phoneNumberController.dispose();
     _bloodGroupController.dispose();
+    _batchController.dispose();
+    _admissionNumberController.dispose();
+    _dobController.dispose();
     super.dispose();
   }
 
@@ -93,7 +101,11 @@ class _StudentEditScreenState extends State<StudentEditScreen> {
           _addressController2.text = data['address2'] ?? '';
           _addressController3.text = data['address3'] ?? '';
           _contactController.text = data['contactNumber'] ?? '';
+          _phoneNumberController.text = data['phoneNumber'] ?? '';
           _bloodGroupController.text = data['bloodGroup'] ?? '';
+          _batchController.text = data['batch'] ?? '';
+          _admissionNumberController.text = data['admissionNumber'] ?? '';
+          _dobController.text = data['dob'] ?? '';
           _isLoading = false;
         });
       } else {
@@ -109,8 +121,6 @@ class _StudentEditScreenState extends State<StudentEditScreen> {
 
   // ── Image helpers ─────────────────────────────────────────────
 
-  /// Compress on a background isolate: resize to max 1024 px on the longer
-  /// side, then encode as JPEG at 85 % quality to reduce file size.
   static Uint8List _compressImage(Uint8List bytes) {
     final image = img.decodeImage(bytes);
     if (image == null) return bytes;
@@ -122,7 +132,7 @@ class _StudentEditScreenState extends State<StudentEditScreen> {
     } else if (image.height > image.width && image.height > maxDim) {
       resized = img.copyResize(image, height: maxDim);
     } else {
-      resized = image; // already small enough
+      resized = image;
     }
 
     return Uint8List.fromList(img.encodeJpg(resized, quality: 85));
@@ -157,6 +167,42 @@ class _StudentEditScreenState extends State<StudentEditScreen> {
       }
     } finally {
       if (mounted) setState(() => _isProcessingPhoto = false);
+    }
+  }
+
+  // ── Date picker ───────────────────────────────────────────────
+
+  Future<void> _pickDob() async {
+    // Try to parse existing value so the picker opens at that date
+    DateTime initialDate = DateTime.now().subtract(
+      const Duration(days: 365 * 10),
+    );
+    if (_dobController.text.isNotEmpty) {
+      try {
+        final parts = _dobController.text.split('-');
+        if (parts.length == 3) {
+          initialDate = DateTime(
+            int.parse(parts[0]),
+            int.parse(parts[1]),
+            int.parse(parts[2]),
+          );
+        }
+      } catch (_) {}
+    }
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(1990),
+      lastDate: DateTime.now(),
+      helpText: 'Select Date of Birth',
+    );
+
+    if (picked != null && mounted) {
+      setState(() {
+        _dobController.text =
+            '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+      });
     }
   }
 
@@ -201,13 +247,11 @@ class _StudentEditScreenState extends State<StudentEditScreen> {
     setState(() => _isSaving = true);
 
     try {
-      // Step 1 — upload new photo if available
       String? newPhotoUrl;
       if (_processedPhotoBytes != null) {
         newPhotoUrl = await _uploadPhoto();
       }
 
-      // Step 2 — build update payload
       final updateData = <String, dynamic>{
         'name': _nameController.text.trim(),
         'rollNumber': _rollController.text.trim(),
@@ -217,12 +261,15 @@ class _StudentEditScreenState extends State<StudentEditScreen> {
         'address2': _addressController2.text.trim(),
         'address3': _addressController3.text.trim(),
         'contactNumber': _contactController.text.trim(),
+        'phoneNumber': _phoneNumberController.text.trim(),
         'bloodGroup': _bloodGroupController.text.trim(),
+        'batch': _batchController.text.trim(),
+        'admissionNumber': _admissionNumberController.text.trim(),
+        'dob': _dobController.text.trim(),
         'updatedAt': FieldValue.serverTimestamp(),
         if (newPhotoUrl != null) 'photoUrl': newPhotoUrl,
       };
 
-      // Step 3 — write to Firestore
       await _studentDoc.update(updateData);
 
       if (mounted) {
@@ -319,7 +366,6 @@ class _StudentEditScreenState extends State<StudentEditScreen> {
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          // Avatar
                           Container(
                             width: 130,
                             height: 130,
@@ -351,8 +397,6 @@ class _StudentEditScreenState extends State<StudentEditScreen> {
                                         )
                                       : const Icon(Icons.person, size: 60)),
                           ),
-
-                          // Processing overlay
                           if (_isProcessingPhoto)
                             Container(
                               width: 130,
@@ -384,8 +428,6 @@ class _StudentEditScreenState extends State<StudentEditScreen> {
                                 ],
                               ),
                             ),
-
-                          // Saving dim
                           if (_isSaving)
                             Container(
                               width: 130,
@@ -395,8 +437,6 @@ class _StudentEditScreenState extends State<StudentEditScreen> {
                                 color: Colors.black.withOpacity(0.25),
                               ),
                             ),
-
-                          // Camera badge
                           if (!busy)
                             Positioned(
                               bottom: 4,
@@ -424,10 +464,7 @@ class _StudentEditScreenState extends State<StudentEditScreen> {
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 8),
-
-                    // Status label
                     AnimatedSwitcher(
                       duration: const Duration(milliseconds: 250),
                       child: _photoStatus.isNotEmpty
@@ -457,7 +494,8 @@ class _StudentEditScreenState extends State<StudentEditScreen> {
 
               const SizedBox(height: 24),
 
-              // ── Form Fields ────────────────────────────────────
+              // ── Personal Info Section ──────────────────────────
+              _sectionHeader('Personal Information'),
               _field(
                 _nameController,
                 'Student Name',
@@ -470,6 +508,18 @@ class _StudentEditScreenState extends State<StudentEditScreen> {
                 Icons.numbers,
                 required: true,
               ),
+              _field(
+                _admissionNumberController,
+                'Admission Number',
+                Icons.badge,
+                required: true,
+              ),
+              _field(_batchController, 'Batch', Icons.school, required: true),
+              _dobField(),
+              _field(_bloodGroupController, 'Blood Group', Icons.bloodtype),
+
+              // ── Parent Info Section ────────────────────────────
+              _sectionHeader('Parent Information'),
               _field(
                 _fatherController,
                 "Father's Name",
@@ -489,7 +539,15 @@ class _StudentEditScreenState extends State<StudentEditScreen> {
                 required: true,
                 keyboard: TextInputType.phone,
               ),
-              _field(_bloodGroupController, 'Blood Group', Icons.bloodtype),
+              _field(
+                _phoneNumberController,
+                'Phone Number',
+                Icons.phone_android,
+                keyboard: TextInputType.phone,
+              ),
+
+              // ── Address Section ────────────────────────────────
+              _sectionHeader('Address'),
               _field(
                 _addressController1,
                 'Address Line 1',
@@ -547,6 +605,54 @@ class _StudentEditScreenState extends State<StudentEditScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // ── Section header ────────────────────────────────────────────
+
+  Widget _sectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12, top: 4),
+      child: Row(
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Theme.of(context).primaryColor,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Divider(
+              color: Theme.of(context).primaryColor.withOpacity(0.25),
+              thickness: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── DOB field (taps to open date picker) ──────────────────────
+
+  Widget _dobField() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: TextFormField(
+        controller: _dobController,
+        readOnly: true,
+        onTap: _pickDob,
+        decoration: InputDecoration(
+          labelText: 'Date of Birth *',
+          prefixIcon: const Icon(Icons.cake),
+          suffixIcon: const Icon(Icons.calendar_today, size: 18),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+        validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
       ),
     );
   }

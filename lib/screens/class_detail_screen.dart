@@ -1301,14 +1301,17 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     dynamic classModel,
     String backgroundUrl,
   ) async {
-    // print(backgroundUrl);
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
+
+    // 🔥 300 DPI SCALE
+    const double scale = 3.0;
+    canvas.scale(scale);
 
     const double cardWidth = 350;
     const double cardHeight = 550;
 
-    // ✅ LOAD IMAGES CORRECTLY
+    // LOAD IMAGES
     final bgImage = await loadNetworkImageWebSafe(backgroundUrl);
 
     ui.Image? photoImage;
@@ -1347,7 +1350,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       double size,
       FontWeight weight,
       Color color, {
-      double maxWidth = 200, // control width
+      double maxWidth = 200,
     }) {
       final painter = TextPainter(
         text: TextSpan(
@@ -1355,10 +1358,8 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
           style: TextStyle(fontSize: size, fontWeight: weight, color: color),
         ),
         textDirection: TextDirection.ltr,
-        textAlign: TextAlign.left, // 👈 always left
       )..layout(maxWidth: maxWidth);
 
-      // 👇 FIXED START POSITION (NO SHIFTING)
       painter.paint(canvas, Offset(x, y));
     }
 
@@ -1372,12 +1373,8 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
 
       if (totalWords == 0) return [];
 
-      // Decide number of lines
-      int lines = (totalWords / 3).ceil(); // prefer 3 words per line
+      int lines = (totalWords / 3).ceil();
       lines = lines.clamp(1, maxLines);
-
-      // Distribute words evenly
-      int wordsPerLine = (totalWords / lines).ceil();
 
       List<List<String>> result = [];
       int index = 0;
@@ -1387,7 +1384,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
         int remainingLines = lines - i;
 
         int take = (remainingWords / remainingLines).ceil();
-        take = take.clamp(2, 3); // enforce 2–3 words per line
+        take = take.clamp(2, 3);
 
         result.add(words.sublist(index, (index + take).clamp(0, totalWords)));
         index += take;
@@ -1395,7 +1392,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
         if (index >= totalWords) break;
       }
 
-      // 🔥 Adjust for minimum characters
       for (int i = 0; i < result.length - 1; i++) {
         String current = result[i].join(' ');
         if (current.length < minCharsPerLine && result[i + 1].isNotEmpty) {
@@ -1408,12 +1404,12 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
 
     void drawTextHeading(
       String text,
-      double x, // NEW: horizontal position
-      double y, // vertical position (TOP of text)
+      double x,
+      double y,
       double size,
       FontWeight weight,
       Color color, {
-      TextAlign align = TextAlign.center, // NEW
+      TextAlign align = TextAlign.center,
     }) {
       final painter = TextPainter(
         text: TextSpan(
@@ -1430,7 +1426,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
 
       double drawX = x;
 
-      // Adjust X based on alignment
       if (align == TextAlign.center) {
         drawX = x - painter.width / 2;
       } else if (align == TextAlign.right) {
@@ -1446,10 +1441,10 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       double y,
       double size,
       FontWeight weight,
-      Color color, {
-      double lineGap = 2,
-    }) {
+      Color color,
+    ) {
       final lines = splitTextIntoLinesSmart(text);
+
       for (int i = 0; i < lines.length; i++) {
         final painter = TextPainter(
           text: TextSpan(
@@ -1459,32 +1454,20 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
           textDirection: TextDirection.ltr,
         )..layout(maxWidth: 300);
 
-        painter.paint(canvas, Offset(x, y + i * (painter.height + lineGap)));
+        painter.paint(canvas, Offset(x, y + i * (painter.height + 2)));
       }
     }
 
-    // PHOTO RECT
-    const double photoWidth = 132;
-    const double photoHeight = 152;
-    const double radius = 1;
-
+    // PHOTO
     final photoRect = Rect.fromCenter(
       center: const Offset(cardWidth / 2.01, 185),
-      width: photoWidth,
-      height: photoHeight,
-    );
-
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        photoRect.inflate(4),
-        const Radius.circular(radius + 4),
-      ),
-      Paint()..color = const ui.Color.fromARGB(0, 255, 255, 255),
+      width: 132,
+      height: 152,
     );
 
     canvas.save();
     canvas.clipRRect(
-      RRect.fromRectAndRadius(photoRect, const Radius.circular(radius)),
+      RRect.fromRectAndRadius(photoRect, const Radius.circular(1)),
     );
 
     if (photoImage != null) {
@@ -1499,18 +1482,11 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
         photoRect,
         Paint()..filterQuality = ui.FilterQuality.high,
       );
-    } else {
-      canvas.drawRect(
-        photoRect,
-        Paint()
-          ..color = const ui.Color.fromARGB(0, 255, 255, 255).withOpacity(0.1),
-      );
     }
 
     canvas.restore();
 
     // DETAILS
-    double y = 340;
     drawTextHeading(
       student['bloodGroup'] ?? '?',
       cardWidth / 1.11,
@@ -1519,6 +1495,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       FontWeight.w800,
       Colors.red,
     );
+
     drawTextHeading(
       student['name'] ?? '?',
       cardWidth / 2,
@@ -1527,6 +1504,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       FontWeight.w800,
       Colors.black,
     );
+
     drawTextHeading(
       'CLASS: ${(student['batch'] ?? '?').toString().toUpperCase()}',
       cardWidth / 2,
@@ -1537,15 +1515,16 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     );
 
     drawText(
-      'Admn No: ${student['admissionNumber'] ?? '?'.toString().toUpperCase()}',
+      'Admn No: ${student['admissionNumber'] ?? '?'}',
       30,
       344,
       16,
       FontWeight.w500,
       Colors.black,
     );
+
     drawText(
-      'DOB: ${student['dateOfBirth'] ?? '?'.toString().toUpperCase()}',
+      'DOB: ${student['dateOfBirth'] ?? '?'}',
       30,
       369,
       16,
@@ -1553,26 +1532,50 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       Colors.black,
     );
 
-    final address1 = student['address1'] ?? '?';
-    final address2 = student['address2'] ?? '?';
-    final address3 = student['address3'] ?? '?';
+    drawBalancedText(
+      student['address1'] ?? '',
+      30,
+      389,
+      18,
+      FontWeight.w500,
+      Colors.black,
+    );
 
-    drawBalancedText(address1, 30, 389, 18, FontWeight.w500, Colors.black);
-    drawBalancedText(address2, 30, 408, 18, FontWeight.w500, Colors.black);
-    drawBalancedText(address3, 30, 429, 18, FontWeight.w500, Colors.black);
+    drawBalancedText(
+      student['address2'] ?? '',
+      30,
+      408,
+      18,
+      FontWeight.w500,
+      Colors.black,
+    );
+
+    drawBalancedText(
+      student['address3'] ?? '',
+      30,
+      429,
+      18,
+      FontWeight.w500,
+      Colors.black,
+    );
 
     drawText(
-      'Contact: ${student['contactNumber'] ?? '?'.toString().toUpperCase()}',
+      'Contact: ${student['contactNumber'] ?? '?'}',
       30,
       458,
       16,
       FontWeight.w500,
-      const ui.Color.fromARGB(255, 0, 0, 0),
+      Colors.black,
     );
-    y += 42;
 
+    // FINAL OUTPUT
     final picture = recorder.endRecording();
-    final image = await picture.toImage(cardWidth.toInt(), cardHeight.toInt());
+
+    final image = await picture.toImage(
+      (cardWidth * scale).toInt(),
+      (cardHeight * scale).toInt(),
+    );
+
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
 
     return byteData!.buffer.asUint8List();
@@ -1583,14 +1586,17 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     dynamic classModel,
     String backgroundUrl,
   ) async {
-    // print(backgroundUrl);
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
+
+    // 🔥 SCALE FOR 300 DPI
+    const double scale = 3.0;
+    canvas.scale(scale);
 
     const double cardWidth = 350;
     const double cardHeight = 550;
 
-    // ✅ LOAD IMAGES CORRECTLY
+    // LOAD IMAGES
     final bgImage = await loadNetworkImageWebSafe(backgroundUrl);
 
     ui.Image? photoImage;
@@ -1620,6 +1626,9 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     } else {
       canvas.drawRect(cardRect, Paint()..color = const Color(0xFFEFEFEF));
     }
+
+    // ---------------- TEXT HELPERS ---------------- //
+
     List<String> splitTextIntoLinesSmart(
       String text, {
       int maxLines = 3,
@@ -1630,12 +1639,8 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
 
       if (totalWords == 0) return [];
 
-      // Decide number of lines
-      int lines = (totalWords / 3).ceil(); // prefer 3 words per line
+      int lines = (totalWords / 3).ceil();
       lines = lines.clamp(1, maxLines);
-
-      // Distribute words evenly
-      int wordsPerLine = (totalWords / lines).ceil();
 
       List<List<String>> result = [];
       int index = 0;
@@ -1645,7 +1650,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
         int remainingLines = lines - i;
 
         int take = (remainingWords / remainingLines).ceil();
-        take = take.clamp(2, 3); // enforce 2–3 words per line
+        take = take.clamp(2, 3);
 
         result.add(words.sublist(index, (index + take).clamp(0, totalWords)));
         index += take;
@@ -1653,7 +1658,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
         if (index >= totalWords) break;
       }
 
-      // 🔥 Adjust for minimum characters
       for (int i = 0; i < result.length - 1; i++) {
         String current = result[i].join(' ');
         if (current.length < minCharsPerLine && result[i + 1].isNotEmpty) {
@@ -1666,12 +1670,12 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
 
     void drawTextHeading(
       String text,
-      double x, // NEW: horizontal position
-      double y, // vertical position (TOP of text)
+      double x,
+      double y,
       double size,
       FontWeight weight,
       Color color, {
-      TextAlign align = TextAlign.center, // NEW
+      TextAlign align = TextAlign.center,
     }) {
       final painter = TextPainter(
         text: TextSpan(
@@ -1688,7 +1692,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
 
       double drawX = x;
 
-      // Adjust X based on alignment
       if (align == TextAlign.center) {
         drawX = x - painter.width / 2;
       } else if (align == TextAlign.right) {
@@ -1704,10 +1707,10 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       double y,
       double size,
       FontWeight weight,
-      Color color, {
-      double lineGap = 2,
-    }) {
+      Color color,
+    ) {
       final lines = splitTextIntoLinesSmart(text);
+
       for (int i = 0; i < lines.length; i++) {
         final painter = TextPainter(
           text: TextSpan(
@@ -1717,11 +1720,10 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
           textDirection: TextDirection.ltr,
         )..layout(maxWidth: 300);
 
-        painter.paint(canvas, Offset(x, y + i * (painter.height + lineGap)));
+        painter.paint(canvas, Offset(x, y + i * (painter.height + 2)));
       }
     }
 
-    // TEXT HELPER
     void drawText(
       String text,
       double x,
@@ -1736,8 +1738,8 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
           style: TextStyle(fontSize: size, fontWeight: weight, color: color),
         ),
         textDirection: TextDirection.ltr,
-        maxLines: 1, // 👈 prevents wrapping
-      )..layout(); // no width limit
+        maxLines: 1,
+      )..layout();
 
       painter.paint(canvas, Offset(x, y));
     }
@@ -1745,7 +1747,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     void drawTextStroke(
       Canvas canvas,
       String text,
-      double centerX, // 👈 pass center X instead of left X
+      double centerX,
       double y,
       double size,
       FontWeight weight,
@@ -1753,24 +1755,18 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     ) {
       final textStyle = TextStyle(fontSize: size, fontWeight: weight);
 
-      // 🔹 Measure text width
       final measurePainter = TextPainter(
         text: TextSpan(text: text, style: textStyle),
         textDirection: TextDirection.ltr,
         maxLines: 1,
       )..layout();
 
-      final textWidth = measurePainter.width;
+      final startX = centerX - (measurePainter.width / 2);
 
-      // 👇 Calculate starting X so text is centered
-      final startX = centerX - (textWidth / 2);
-
-      // 🔸 Stroke (border)
       final strokePaint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2
-        ..color = const Color(0xFFFFFFFF)
-        ..strokeJoin = StrokeJoin.round;
+        ..color = Colors.white;
 
       final strokePainter = TextPainter(
         text: TextSpan(
@@ -1778,108 +1774,32 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
           style: textStyle.copyWith(foreground: strokePaint),
         ),
         textDirection: TextDirection.ltr,
-        maxLines: 1,
       )..layout();
 
       strokePainter.paint(canvas, Offset(startX, y));
 
-      // 🔸 Fill (text)
       final fillPainter = TextPainter(
         text: TextSpan(
           text: text,
           style: textStyle.copyWith(color: color),
         ),
         textDirection: TextDirection.ltr,
-        maxLines: 1,
       )..layout();
 
       fillPainter.paint(canvas, Offset(startX, y));
     }
 
-    List<String> splitTextIntoLines(
-      String text, {
-      int maxCharsPerLine = 12,
-      int maxLines = 3,
-    }) {
-      final words = text.trim().split(RegExp(r'\s+'));
-      final lines = <String>[];
-      String currentLine = '';
-
-      for (final word in words) {
-        final testLine = currentLine.isEmpty ? word : '$currentLine $word';
-
-        if (testLine.length <= maxCharsPerLine) {
-          currentLine = testLine;
-        } else {
-          if (currentLine.isNotEmpty) {
-            lines.add(currentLine);
-          }
-          currentLine = word;
-
-          if (lines.length == maxLines - 1) {
-            lines.add('$currentLine...');
-            return lines;
-          }
-        }
-      }
-
-      if (currentLine.isNotEmpty && lines.length < maxLines) {
-        lines.add(currentLine);
-      }
-
-      return lines;
-    }
-
-    // void drawBalancedText(
-    //   String text,
-    //   double x,
-    //   double y,
-    //   double size,
-    //   FontWeight weight,
-    //   Color color, {
-    //   double lineGap = 3,
-    // }) {
-    //   final lines = splitTextIntoLines(text, maxCharsPerLine: 20, maxLines: 3);
-
-    //   for (int i = 0; i < lines.length; i++) {
-    //     final painter = TextPainter(
-    //       text: TextSpan(
-    //         text: lines[i],
-    //         style: GoogleFonts.poppins(
-    //           fontSize: size,
-    //           fontWeight: weight,
-    //           color: color,
-    //         ),
-    //       ),
-    //       textDirection: TextDirection.ltr,
-    //     )..layout(maxWidth: 200);
-
-    //     painter.paint(canvas, Offset(x, y + i * (painter.height + lineGap)));
-    //   }
-    // }
-
-    // PHOTO RECT
-    const double photoWidth = 156;
-    const double photoHeight = 190.5;
-    const double radius = 1;
+    // ---------------- PHOTO ---------------- //
 
     final photoRect = Rect.fromCenter(
       center: const Offset(cardWidth / 2, 234.5),
-      width: photoWidth,
-      height: photoHeight,
-    );
-
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        photoRect.inflate(4),
-        const Radius.circular(radius + 4),
-      ),
-      Paint()..color = const ui.Color.fromARGB(0, 255, 255, 255),
+      width: 156,
+      height: 190.5,
     );
 
     canvas.save();
     canvas.clipRRect(
-      RRect.fromRectAndRadius(photoRect, const Radius.circular(radius)),
+      RRect.fromRectAndRadius(photoRect, const Radius.circular(1)),
     );
 
     if (photoImage != null) {
@@ -1894,35 +1814,23 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
         photoRect,
         Paint()..filterQuality = ui.FilterQuality.high,
       );
-    } else {
-      canvas.drawRect(
-        photoRect,
-        Paint()..color = const ui.Color.fromARGB(0, 0, 0, 0).withOpacity(0.1),
-      );
     }
 
     canvas.restore();
 
-    // DETAILS
-    double y = 340;
-    // drawText(
-    //   '${student['bloodGroup'] ?? '?'.toString().toUpperCase()}',
-    //   cardWidth / 1.11,
-    //   165.5,
-    //   18,
-    //   FontWeight.w800,
-    //   Colors.red,
-    // );
+    // ---------------- DETAILS ---------------- //
+
     drawTextHeading(
-      student['name'] ?? '?'.toString().toUpperCase(),
+      student['name'] ?? '?',
       cardWidth / 2,
       340,
       25,
       FontWeight.w800,
       Colors.red,
     );
+
     drawTextHeading(
-      'STD: ${(student['batch'] ?? '?').toString().toUpperCase()}',
+      'STD: ${(student['batch'] ?? '?')}',
       cardWidth / 2,
       370,
       20,
@@ -1931,42 +1839,69 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     );
 
     drawText(
-      'Ad.No: ${student['admissionNumber'] ?? '?'.toString().toUpperCase()}',
+      'Ad.No: ${student['admissionNumber'] ?? '?'}',
       30,
       400,
       18,
       FontWeight.w700,
-      const ui.Color.fromARGB(255, 33, 79, 243),
+      const Color(0xFF214FF3),
     );
+
     drawText(
-      'Dob: ${student['dateOfBirth'] ?? '?'.toString().toUpperCase()}',
+      'Dob: ${student['dateOfBirth'] ?? '?'}',
       cardWidth / 2,
       400,
       18,
       FontWeight.w700,
-      const ui.Color.fromARGB(255, 33, 79, 243),
+      const Color(0xFF214FF3),
     );
-    final address1 = student['address1'] ?? '?';
-    final address2 = student['address2'] ?? '?';
-    final address3 = student['address3'] ?? '?';
 
-    drawBalancedText(address1, 30, 427, 18, FontWeight.w500, Colors.black);
-    drawBalancedText(address2, 30, 446, 18, FontWeight.w500, Colors.black);
-    drawBalancedText(address3, 30, 467, 18, FontWeight.w500, Colors.black);
+    drawBalancedText(
+      student['address1'] ?? '',
+      30,
+      427,
+      18,
+      FontWeight.w500,
+      Colors.black,
+    );
+
+    drawBalancedText(
+      student['address2'] ?? '',
+      30,
+      446,
+      18,
+      FontWeight.w500,
+      Colors.black,
+    );
+
+    drawBalancedText(
+      student['address3'] ?? '',
+      30,
+      467,
+      18,
+      FontWeight.w500,
+      Colors.black,
+    );
 
     drawTextStroke(
       canvas,
-      'Ph: ${student['contactNumber'] ?? '?'.toString().toUpperCase()} - ${student['phoneNumber'] ?? '?'.toString().toUpperCase()}',
+      'Ph: ${student['contactNumber'] ?? '?'} - ${student['phoneNumber'] ?? '?'}',
       cardWidth / 2,
       520,
       16,
       FontWeight.w700,
-      const ui.Color.fromARGB(255, 0, 0, 0),
+      Colors.black,
     );
-    y += 42;
+
+    // ---------------- FINAL OUTPUT ---------------- //
 
     final picture = recorder.endRecording();
-    final image = await picture.toImage(cardWidth.toInt(), cardHeight.toInt());
+
+    final image = await picture.toImage(
+      (cardWidth * scale).toInt(),
+      (cardHeight * scale).toInt(),
+    );
+
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
 
     return byteData!.buffer.asUint8List();
@@ -1977,14 +1912,17 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     dynamic classModel,
     String backgroundUrl,
   ) async {
-    // print(backgroundUrl);
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
+
+    // 🔥 300 DPI SCALE
+    const double scale = 3.0;
+    canvas.scale(scale);
 
     const double cardWidth = 350;
     const double cardHeight = 550;
 
-    // ✅ LOAD IMAGES CORRECTLY
+    // LOAD IMAGES
     final bgImage = await loadNetworkImageWebSafe(backgroundUrl);
 
     ui.Image? photoImage;
@@ -2023,7 +1961,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       double size,
       FontWeight weight,
       Color color, {
-      double maxWidth = 200, // control width
+      double maxWidth = 200,
     }) {
       final painter = TextPainter(
         text: TextSpan(
@@ -2031,10 +1969,8 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
           style: TextStyle(fontSize: size, fontWeight: weight, color: color),
         ),
         textDirection: TextDirection.ltr,
-        textAlign: TextAlign.left, // 👈 always left
       )..layout(maxWidth: maxWidth);
 
-      // 👇 FIXED START POSITION (NO SHIFTING)
       painter.paint(canvas, Offset(x, y));
     }
 
@@ -2048,12 +1984,8 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
 
       if (totalWords == 0) return [];
 
-      // Decide number of lines
-      int lines = (totalWords / 3).ceil(); // prefer 3 words per line
+      int lines = (totalWords / 3).ceil();
       lines = lines.clamp(1, maxLines);
-
-      // Distribute words evenly
-      int wordsPerLine = (totalWords / lines).ceil();
 
       List<List<String>> result = [];
       int index = 0;
@@ -2063,7 +1995,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
         int remainingLines = lines - i;
 
         int take = (remainingWords / remainingLines).ceil();
-        take = take.clamp(2, 3); // enforce 2–3 words per line
+        take = take.clamp(2, 3);
 
         result.add(words.sublist(index, (index + take).clamp(0, totalWords)));
         index += take;
@@ -2071,7 +2003,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
         if (index >= totalWords) break;
       }
 
-      // 🔥 Adjust for minimum characters
       for (int i = 0; i < result.length - 1; i++) {
         String current = result[i].join(' ');
         if (current.length < minCharsPerLine && result[i + 1].isNotEmpty) {
@@ -2084,12 +2015,12 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
 
     void drawTextHeading(
       String text,
-      double x, // NEW: horizontal position
-      double y, // vertical position (TOP of text)
+      double x,
+      double y,
       double size,
       FontWeight weight,
       Color color, {
-      TextAlign align = TextAlign.center, // NEW
+      TextAlign align = TextAlign.center,
     }) {
       final painter = TextPainter(
         text: TextSpan(
@@ -2106,7 +2037,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
 
       double drawX = x;
 
-      // Adjust X based on alignment
       if (align == TextAlign.center) {
         drawX = x - painter.width / 2;
       } else if (align == TextAlign.right) {
@@ -2122,10 +2052,10 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       double y,
       double size,
       FontWeight weight,
-      Color color, {
-      double lineGap = 2,
-    }) {
+      Color color,
+    ) {
       final lines = splitTextIntoLinesSmart(text);
+
       for (int i = 0; i < lines.length; i++) {
         final painter = TextPainter(
           text: TextSpan(
@@ -2135,32 +2065,20 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
           textDirection: TextDirection.ltr,
         )..layout(maxWidth: 300);
 
-        painter.paint(canvas, Offset(x, y + i * (painter.height + lineGap)));
+        painter.paint(canvas, Offset(x, y + i * (painter.height + 2)));
       }
     }
 
-    // PHOTO RECT
-    const double photoWidth = 185;
-    const double photoHeight = 220;
-    const double radius = 15;
-
+    // PHOTO
     final photoRect = Rect.fromCenter(
       center: const Offset(cardWidth / 2.05, 230),
-      width: photoWidth,
-      height: photoHeight,
-    );
-
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        photoRect.inflate(4),
-        const Radius.circular(radius + 4),
-      ),
-      Paint()..color = const ui.Color.fromARGB(0, 255, 255, 255),
+      width: 185,
+      height: 220,
     );
 
     canvas.save();
     canvas.clipRRect(
-      RRect.fromRectAndRadius(photoRect, const Radius.circular(radius)),
+      RRect.fromRectAndRadius(photoRect, const Radius.circular(15)),
     );
 
     if (photoImage != null) {
@@ -2175,88 +2093,73 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
         photoRect,
         Paint()..filterQuality = ui.FilterQuality.high,
       );
-    } else {
-      canvas.drawRect(
-        photoRect,
-        Paint()
-          ..color = const ui.Color.fromARGB(0, 255, 255, 255).withOpacity(0.1),
-      );
     }
 
     canvas.restore();
 
     // DETAILS
-    double y = 340;
-    // drawTextHeading(
-    //   student['bloodGroup'] ?? '?',
-    //   cardWidth / 1.11,
-    //   165.5,
-    //   18,
-    //   FontWeight.w800,
-    //   Colors.red,
-    // );
     drawTextHeading(
       student['name'] ?? '?',
       cardWidth / 2,
       350,
       24,
       FontWeight.w800,
-      const ui.Color.fromARGB(255, 204, 0, 0),
+      const Color(0xFFCC0000),
     );
-    // drawTextHeading(
-    //   'CLASS: ${(student['batch'] ?? '?').toString().toUpperCase()}',
-    //   cardWidth / 2,
-    //   300,
-    //   18,
-    //   FontWeight.w700,
-    //   Colors.black,
-    // );
 
-    // drawText(
-    //   'Admn No: ${student['admissionNumber'] ?? '?'.toString().toUpperCase()}',
-    //   30,
-    //   344,
-    //   16,
-    //   FontWeight.w500,
-    //   Colors.black,
-    // );
-    // drawText(
-    //   'DOB: ${student['dateOfBirth'] ?? '?'.toString().toUpperCase()}',
-    //   30,
-    //   369,
-    //   16,
-    //   FontWeight.w500,
-    //   Colors.black,
-    // );
-
-    final address1 = student['address1'] ?? '?';
-    final address2 = student['address2'] ?? '?';
-    final address3 = student['address3'] ?? '?';
     drawText(
-      'S/O ${student['fatherName'] ?? '?'.toString().toUpperCase()}',
+      'S/O ${student['fatherName'] ?? '?'}',
       30,
       385,
       18,
       FontWeight.w500,
-      const ui.Color.fromARGB(255, 0, 0, 0),
+      Colors.black,
     );
-    drawBalancedText(address1, 30, 404, 18, FontWeight.w500, Colors.black);
-    drawBalancedText(address2, 30, 423, 18, FontWeight.w500, Colors.black);
-    drawBalancedText(address3, 30, 444, 18, FontWeight.w500, Colors.black);
 
     drawBalancedText(
-      'Phone : ${student['phoneNumber'] ?? '?'.toString().toUpperCase()},${student['contactNumber'] ?? '?'.toString().toUpperCase()} ',
+      student['address1'] ?? '',
+      30,
+      404,
+      18,
+      FontWeight.w500,
+      Colors.black,
+    );
+
+    drawBalancedText(
+      student['address2'] ?? '',
+      30,
+      423,
+      18,
+      FontWeight.w500,
+      Colors.black,
+    );
+
+    drawBalancedText(
+      student['address3'] ?? '',
+      30,
+      444,
+      18,
+      FontWeight.w500,
+      Colors.black,
+    );
+
+    drawBalancedText(
+      'Phone : ${student['phoneNumber'] ?? '?'}, ${student['contactNumber'] ?? '?'}',
       30,
       475,
       18,
       FontWeight.w800,
-      const ui.Color.fromARGB(255, 224, 0, 0),
+      const Color(0xFFE00000),
     );
 
-    y += 42;
-
+    // FINAL OUTPUT
     final picture = recorder.endRecording();
-    final image = await picture.toImage(cardWidth.toInt(), cardHeight.toInt());
+
+    final image = await picture.toImage(
+      (cardWidth * scale).toInt(),
+      (cardHeight * scale).toInt(),
+    );
+
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
 
     return byteData!.buffer.asUint8List();
